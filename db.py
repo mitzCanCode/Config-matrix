@@ -1,29 +1,29 @@
-from sqlalchemy import create_engine, Column, Integer, String, Date, ForeignKey, Table
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Table
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 # Define the database URL (SQLite database stored in a file)
 DATABASE_URL = "sqlite:///computers.db"
 
 # Create the SQLAlchemy engine
-engine = create_engine(DATABASE_URL, echo=True)  # Set echo=False in production
+engine = create_engine(DATABASE_URL, echo=False)  # Set echo=False in production
 
 # Create a base class for model definitions
 Base = declarative_base()
 
-# Association table: Profiles <-> Apps
-profile_app_association = Table(
-    'profile_app_association',
+# Association table: Profiles <-> SetupSteps
+profile_step_association = Table(
+    'profile_step_association',
     Base.metadata,
     Column('profile_id', Integer, ForeignKey('profiles.id')),
-    Column('app_id', Integer, ForeignKey('apps.id'))
+    Column('step_id', Integer, ForeignKey('setup_steps.id'))
 )
 
-# Association table: Computers <-> Apps
-computer_app_association = Table(
-    'computer_app_association',
+# Association table: Computers <-> SetupSteps
+computer_step_association = Table(
+    'computer_step_association',
     Base.metadata,
     Column('computer_id', Integer, ForeignKey('computers.id')),
-    Column('app_id', Integer, ForeignKey('apps.id'))
+    Column('step_id', Integer, ForeignKey('setup_steps.id'))
 )
 
 class Computers(Base):
@@ -31,12 +31,12 @@ class Computers(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
-    deadline = Column(Date)
-    profile_id = Column(Integer, ForeignKey('profiles.id'))
+    deadline = Column(DateTime)
+    profile_id = Column(Integer, ForeignKey('profiles.id'), nullable=True)
 
     profile = relationship("Profiles", back_populates="computers")
-    downloaded_apps = relationship(
-        "Apps", secondary=computer_app_association, back_populates="downloaded_by"
+    setup_steps = relationship(
+        "SetupSteps", secondary=computer_step_association, back_populates="completed_by"
     )
 
 class Profiles(Base):
@@ -45,23 +45,23 @@ class Profiles(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
 
-    apps_to_download = relationship(
-        "Apps", secondary=profile_app_association, back_populates="profiles"
+    setup_steps_to_follow = relationship(
+        "SetupSteps", secondary=profile_step_association, back_populates="profiles"
     )
     computers = relationship("Computers", back_populates="profile")
 
-class Apps(Base):
-    __tablename__ = 'apps'
+class SetupSteps(Base):
+    __tablename__ = 'setup_steps'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
     download_link = Column(String)  
     
     profiles = relationship(
-        "Profiles", secondary=profile_app_association, back_populates="apps_to_download"
+        "Profiles", secondary=profile_step_association, back_populates="setup_steps_to_follow"
     )
-    downloaded_by = relationship(
-        "Computers", secondary=computer_app_association, back_populates="downloaded_apps"
+    completed_by = relationship(
+        "Computers", secondary=computer_step_association, back_populates="setup_steps"
     )
 
 # Create the tables in the database
