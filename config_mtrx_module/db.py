@@ -26,6 +26,16 @@ computer_step_association = Table(
     Column('step_id', Integer, ForeignKey('setup_steps.id'))
 )
 
+class Technicians(Base):
+    __tablename__ = 'technicians'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    password = Column(String, nullable=False)
+
+    # One-to-many relationship with computers
+    computers = relationship("Computers", back_populates="technician")
+
 class Computers(Base):
     __tablename__ = 'computers'
 
@@ -33,8 +43,10 @@ class Computers(Base):
     name = Column(String)
     deadline = Column(DateTime)
     profile_id = Column(Integer, ForeignKey('profiles.id'), nullable=True)
+    technician_id = Column(Integer, ForeignKey('technicians.id'), nullable=True)
 
     profile = relationship("Profiles", back_populates="computers")
+    technician = relationship("Technicians", back_populates="computers")
     setup_steps = relationship(
         "SetupSteps", secondary=computer_step_association, back_populates="completed_by"
     )

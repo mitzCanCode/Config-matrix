@@ -1,5 +1,5 @@
 ### Custom module imports:
-from .db import session, Computers, SetupSteps
+from .db import session, Computers, SetupSteps, Technicians
 from .utils import create_time, validate_int
 from .profiles import retrieve_all_profiles
 from .steps import get_remaining_steps
@@ -21,9 +21,10 @@ computer_help = """
 
 edit_computer_help = """
 \033[94mEdit computer commands:\033[0m
-  name     - Edit computer name
-  deadline - Edit computer deadline
-  exit     - Exit computer editing
+  name       - Edit computer name
+  deadline   - Edit computer deadline
+  technician - Assign/change technician
+  exit       - Exit computer editing
 """
 
 
@@ -82,6 +83,24 @@ def retrieve_all_computers() -> tuple:
             return (True, "No computers have been created yet", computers, 200)
     except Exception as e:
         return (False, "An error occurred while mapping computers", [], 500)
+
+def retrieve_computers_by_technician(technician_name: str) -> tuple:
+    """Retrieve computers assigned to a specific technician"""
+    try:
+        # Find technician by name
+        technician = session.query(Technicians).filter_by(name=technician_name).first()
+        if not technician:
+            return (False, f"Technician '{technician_name}' not found", [], 404)
+        
+        # Retrieve computers assigned to this technician
+        computers = session.query(Computers).filter_by(technician_id=technician.id).all()
+        if computers:
+            return (True, f"Retrieved {len(computers)} computers assigned to '{technician_name}'", computers, 200)
+        else:
+            return (True, f"No computers assigned to '{technician_name}'", computers, 200)
+    except Exception as e:
+        print(e)
+        return (False, "An error occurred while retrieving computers by technician", [], 500)
 
 def edit_computer_name(current_name: str, new_name: str) -> tuple:
     try:
@@ -151,22 +170,93 @@ def get_computer_progress(computer_name: str) -> tuple:
         print(e)
         return (False, "Error retrieving computer progress", 500)
     
-def create_computer(name: str, deadline: datetime, profile_id: int) -> tuple:
+def create_computer(name: str, deadline: datetime, profile_id: int, technician_name: str) -> tuple:
     try:
+        # Find technician by name
+        technician = session.query(Technicians).filter_by(name=technician_name).first()
+        if not technician:
+            return (False, f"Technician '{technician_name}' not found", 404)
+
         new_computer = Computers(
             name = name,
             deadline = deadline,
-            profile_id = profile_id, 
+            profile_id = profile_id,
+            technician_id = technician.id,
             setup_steps = []
         )
         session.add(new_computer)
         session.commit()
-        return (True, f"Computer ({name}) was created", 200)
+        return (True, f"Computer ({name}) was created and assigned to technician {technician_name}", 200)
     
     except Exception as e:
         print(e)
         session.rollback()
         return (False, f"Computer ({name}) creation failed", 500)
+
+def retrieve_all_technicians() -> tuple:
+    """Retrieve all technicians from the database"""
+    try:
+        technicians = session.query(Technicians).all()
+        if technicians:
+            return (True, "Technicians retrieved successfully", technicians, 200)
+        else:
+            return (True, "No technicians have been created yet", technicians, 200)
+    except Exception as e:
+        print(e)
+        return (False, "An error occurred while retrieving technicians", [], 500)
+
+def assign_technician_to_computer(computer_name: str, technician_id: int) -> tuple:
+    """Assign a technician to a computer"""
+    try:
+        computer = session.query(Computers).filter_by(name=computer_name).first()
+        if not computer:
+            return (False, f"Computer '{computer_name}' not found", 404)
+        
+        technician = session.query(Technicians).filter_by(id=technician_id).first()
+        if not technician:
+            return (False, f"Technician with ID {technician_id} not found", 404)
+        
+        # Check if computer already has this technician assigned
+        if computer.technician_id == technician_id:
+            return (False, f"Computer '{computer_name}' is already assigned to '{technician.name}'", 409)
+        
+        # Store old technician name for confirmation message
+        old_technician_name = computer.technician.name if computer.technician else "Unassigned"
+        
+        # Assign the technician
+        computer.technician_id = technician_id
+        session.commit()
+        
+        return (True, f"Computer '{computer_name}' assigned from '{old_technician_name}' to '{technician.name}'", 200)
+    
+    except Exception as e:
+        print(e)
+        session.rollback()
+        return (False, f"Error assigning technician to computer", 500)
+
+def unassign_technician_from_computer(computer_name: str) -> tuple:
+    """Remove technician assignment from a computer"""
+    try:
+        computer = session.query(Computers).filter_by(name=computer_name).first()
+        if not computer:
+            return (False, f"Computer '{computer_name}' not found", 404)
+        
+        if not computer.technician_id:
+            return (False, f"Computer '{computer_name}' has no technician assigned", 404)
+        
+        # Store technician name for confirmation message
+        technician_name = computer.technician.name if computer.technician else "Unknown"
+        
+        # Remove the technician assignment
+        computer.technician_id = None
+        session.commit()
+        
+        return (True, f"Technician '{technician_name}' unassigned from computer '{computer_name}'", 200)
+    
+    except Exception as e:
+        print(e)
+        session.rollback()
+        return (False, f"Error unassigning technician from computer", 500)
     
     
     
@@ -216,13 +306,55 @@ def edit_computer_prompt(computer_index: int) -> None:
                 selected_computer.deadline = new_deadline  # Update local reference
             else:
                 print(f"\t\033[31m{message}\033[0m")
+        elif prompt == "technician":
+            # Get all technicians
+            status, message, technicians, _ = retrieve_all_technicians()
+            if not status:
+                print(f"\t\033[31m{message}\033[0m")
+                continue
+            if not technicians:
+                print("\t\033[31mNo technicians available. Create technicians first.\033[0m")
+                continue
+            
+            # Show current assignment
+            current_tech = selected_computer.technician.name if selected_computer.technician else "Unassigned"
+            print(f"\t\033[94mCurrent technician: {current_tech}\033[0m")
+            
+            # Show available technicians
+            print("\t\033[94mAvailable technicians:\033[0m")
+            print("\t\033[36m0. Remove current assignment\033[0m")
+            for i, tech in enumerate(technicians):
+                print(f"\t\033[36m{i+1}. {tech.name}\033[0m")
+            
+            tech_choice, cancelled = validate_int("technician number", 0, len(technicians), indentation_lvl=1)
+            if cancelled:
+                print("\n\t\033[36mTechnician assignment cancelled.\033[0m")
+                continue
+            
+            if tech_choice == 0:
+                # Remove assignment
+                status, message, _ = unassign_technician_from_computer(selected_computer.name)
+                if status:
+                    print(f"\t\033[94m{message}\033[0m")
+                    selected_computer.technician_id = None  # Update local reference
+                else:
+                    print(f"\t\033[31m{message}\033[0m")
+            else:
+                # Assign technician
+                selected_tech = technicians[tech_choice - 1]
+                status, message, _ = assign_technician_to_computer(selected_computer.name, selected_tech.id)
+                if status:
+                    print(f"\t\033[94m{message}\033[0m")
+                    selected_computer.technician_id = selected_tech.id  # Update local reference
+                else:
+                    print(f"\t\033[31m{message}\033[0m")
         elif prompt == "exit":
             break
         else:
             print("\033[94mUnknown command. Type 'help' for available options.\033[0m")
             
-            
-def computer_prompt() -> None:
+
+def computer_prompt(current_user: str = "") -> None:
     while True:
         try:
             prompt = input("Config Matrix/Computers ->")
@@ -257,22 +389,33 @@ def computer_prompt() -> None:
                 print("\n\t\033[36mComputer creation cancelled.\033[0m")
                 continue
 
-            status, message, _ = create_computer(computer_name, deadline, selected_profile.id)
+            status, message, _ = create_computer(computer_name, deadline, selected_profile.id, current_user)
             if status:
                 print(f"\t\033[94m{message}\033[0m")
             else:
                 print(f"\t\033[31m{message}\033[0m")
         elif prompt == "show":
-            status, message, computers, _ = retrieve_all_computers()
+            try:
+                choice = input("\t\033[94mShow all computers or only assigned to you? (all/assigned): \033[0m").strip().lower()
+            except KeyboardInterrupt:
+                print("\n\033[36mOperation cancelled.\033[0m")
+                continue
+            
+            if choice == "assigned" and current_user:
+                status, message, computers, _ = retrieve_computers_by_technician(current_user)
+            else:
+                status, message, computers, _ = retrieve_all_computers()
+            
             if not status:
-                print(message) 
+                print(message)
                 continue
             if not computers:
                 print(message)
             else:
                 for index, computer in enumerate(computers):
                     profile_name = computer.profile.name if computer.profile else "No Profile"
-                    print(f"\t\033[94m{index + 1}. {computer.name} ({profile_name})\033[0m, \033[36mDue by: {computer.deadline}\033[0m")
+                    tech_name = computer.technician.name if computer.technician else "Unassigned"
+                    print(f"\t\033[94m{index + 1}. {computer.name} ({profile_name})\033[0m, \033[36mDue by: {computer.deadline}\033[0m, \033[93mTechnician: {tech_name}\033[0m")
                     
         elif prompt == "edit":
             status, message, computers, _ = retrieve_all_computers()
@@ -284,7 +427,8 @@ def computer_prompt() -> None:
             else:
                 for index, computer in enumerate(computers):
                     profile_name = computer.profile.name if computer.profile else "No Profile"
-                    print(f"\t\033[94m{index + 1}. {computer.name} ({profile_name})\033[0m, \033[36mDue by: {computer.deadline}\033[0m")
+                    tech_name = computer.technician.name if computer.technician else "Unassigned"
+                    print(f"\t\033[94m{index + 1}. {computer.name} ({profile_name})\033[0m, \033[36mDue by: {computer.deadline}\033[0m, \033[93mTechnician: {tech_name}\033[0m")
                     
             selected_computer, cancelled = validate_int(value_name="computer", value_from=1, value_to=len(computers))
             if cancelled:

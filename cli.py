@@ -1,7 +1,7 @@
 from config_mtrx_module.profiles import profile_prompt
 from config_mtrx_module.steps import setup_step_prompt
 from config_mtrx_module.computers import computer_prompt
-
+from config_mtrx_module.technicians import sign_in_sign_up_cli
 import time
 
 
@@ -81,6 +81,7 @@ computer setups using profiles and setup steps.
 
 
 def main() -> None:
+    _, _, username, password, _ = sign_in_sign_up_cli()
     while True:
         try:
             prompt = input("Config Matrix ->")
@@ -95,7 +96,7 @@ def main() -> None:
         elif prompt == "steps":
             setup_step_prompt()
         elif prompt == "computers":
-            computer_prompt()
+            computer_prompt(username)
         elif prompt == "exit":
             break
         else:

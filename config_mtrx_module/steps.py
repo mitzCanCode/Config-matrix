@@ -57,7 +57,7 @@ def delete_step(step_name: str) -> tuple:
         
 def get_remaining_steps(computer_name: str) -> tuple:
     try:
-        from computers import get_computer_progress
+        from .computers import get_computer_progress
         status, data, code = get_computer_progress(computer_name)
         if not status:
             return (status, data, code)
