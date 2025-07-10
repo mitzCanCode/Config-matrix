@@ -27,6 +27,42 @@ edit_computer_help = """
   exit       - Exit computer editing
 """
 
+def get_computer_assigned_technician(computer_name: str) -> tuple:
+    try:
+        computer = session.query(Computers).filter_by(name=computer_name).first()
+        if not computer:
+            return (False, f"Computer '{computer_name}' not found", None, 404)
+        
+        if not computer.technician_id: # type: ignore
+            return (True, f"No technician assigned to '{computer_name}'", None, 200)
+        
+        technician = computer.technician
+        if technician:
+            return (True, f"Technician '{technician.name}' is assigned to '{computer_name}'", technician, 200)
+        else:
+            return (False, f"Technician data not found for computer '{computer_name}'", None, 404)
+    
+    except Exception as e:
+        print(e)
+        return (False, "Error retrieving assigned technician", None, 500)
+
+
+def get_computer_deadline(computer_name: str) -> tuple:
+    try:
+        computer = session.query(Computers).filter_by(name=computer_name).first()
+        if not computer:
+            return (False, f"Computer '{computer_name}' not found", None, 404)
+        
+        deadline = computer.deadline
+        if deadline: # type: ignore
+            return (True, f"Computer '{computer_name}' has a deadline on {deadline}", deadline, 200)
+        else:
+            return (True, f"No deadline set for '{computer_name}'", None, 200)
+    
+    except Exception as e:
+        print(e)
+        return (False, "Error retrieving computer deadline", None, 500)
+
 
 
 def mark_step_complete(computer_name: str, step_name: str) -> tuple:
@@ -193,6 +229,45 @@ def create_computer(name: str, deadline: datetime, profile_id: int, technician_n
         session.rollback()
         return (False, f"Computer ({name}) creation failed", 500)
 
+def create_computer_by_id(name: str, deadline: datetime, profile_id: int, technician_id: int) -> tuple:
+    """Create a computer using technician ID instead of name"""
+    try:
+        # Check if computer name already exists
+        existing_computer = session.query(Computers).filter_by(name=name).first()
+        if existing_computer:
+            return (False, f"Computer '{name}' already exists", 409)
+        
+        # Find technician by ID
+        technician = session.query(Technicians).filter_by(id=technician_id).first()
+        if not technician:
+            return (False, f"Technician with ID {technician_id} not found", 404)
+        
+        # Check if profile exists
+        from .profiles import retrieve_all_profiles
+        profile_success, _, profiles, _ = retrieve_all_profiles()
+        if not profile_success:
+            return (False, "Error retrieving profiles", 500)
+        
+        profile_exists = any(profile.id == profile_id for profile in profiles)
+        if not profile_exists:
+            return (False, f"Profile with ID {profile_id} not found", 404)
+
+        new_computer = Computers(
+            name = name,
+            deadline = deadline,
+            profile_id = profile_id,
+            technician_id = technician.id,
+            setup_steps = []
+        )
+        session.add(new_computer)
+        session.commit()
+        return (True, f"Computer ({name}) was created and assigned to technician {technician.name}", 200)
+    
+    except Exception as e:
+        print(e)
+        session.rollback()
+        return (False, f"Computer ({name}) creation failed", 500)
+
 def retrieve_all_technicians() -> tuple:
     """Retrieve all technicians from the database"""
     try:
@@ -217,14 +292,14 @@ def assign_technician_to_computer(computer_name: str, technician_id: int) -> tup
             return (False, f"Technician with ID {technician_id} not found", 404)
         
         # Check if computer already has this technician assigned
-        if computer.technician_id == technician_id:
+        if computer.technician_id == technician_id: # type: ignore
             return (False, f"Computer '{computer_name}' is already assigned to '{technician.name}'", 409)
         
         # Store old technician name for confirmation message
         old_technician_name = computer.technician.name if computer.technician else "Unassigned"
         
         # Assign the technician
-        computer.technician_id = technician_id
+        computer.technician_id = technician_id # type: ignore
         session.commit()
         
         return (True, f"Computer '{computer_name}' assigned from '{old_technician_name}' to '{technician.name}'", 200)
@@ -241,14 +316,14 @@ def unassign_technician_from_computer(computer_name: str) -> tuple:
         if not computer:
             return (False, f"Computer '{computer_name}' not found", 404)
         
-        if not computer.technician_id:
+        if not computer.technician_id: # type: ignore
             return (False, f"Computer '{computer_name}' has no technician assigned", 404)
         
         # Store technician name for confirmation message
         technician_name = computer.technician.name if computer.technician else "Unknown"
         
         # Remove the technician assignment
-        computer.technician_id = None
+        computer.technician_id = None # type: ignore
         session.commit()
         
         return (True, f"Technician '{technician_name}' unassigned from computer '{computer_name}'", 200)

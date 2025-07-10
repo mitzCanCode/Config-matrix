@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Computers - Config Matrix{% endblock %}
+
+{% block content %}
+
+
+<!-- Modern Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-main">
+        <a href="/dashboard" class="sidebar-item" data-tooltip="Dashboard">
+            <i class="bi bi-house-door"></i>
+            <span class="sidebar-text">Dashboard</span>
+        </a>
+        <a href="/computers" class="sidebar-item active" data-tooltip="Computers">
+            <i class="bi bi-pc-display"></i>
+            <span class="sidebar-text">Computers</span>
+        </a>
+        <a href="/matrix" class="sidebar-item" data-tooltip="Profiles">
+            <i class="bi bi-collection"></i>
+            <span class="sidebar-text">Profiles</span>
+        </a>
+    </div>
+    <div class="sidebar-bottom">
+        <a href="/help" class="sidebar-item" data-tooltip="Help">
+            <i class="bi bi-question-circle"></i>
+            <span class="sidebar-text">Help</span>
+        </a>
+        <a href="/logout" class="sidebar-item" data-tooltip="Logout">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="sidebar-text">Logout</span>
+        </a>
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">Computers</h1>
+                <div class="row" id="computer-cards">
+                    <!-- Dynamic content will be loaded here -->
+                </div>
+<div class="text-center mt-4">
+    <button id="add-computer-btn" class="btn btn-success mb-4">Add Computer</button>
+    <button id="load-more-btn" class="btn btn-primary" style="display:none; margin-bottom: 20px;">Load More Computers</button>
+    <div id="loading-spinner" style="display:none;">
+        <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="addComputerModal" class="modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Computer</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="add-computer-form">
+          <div class="form-group">
+            <label for="computerName">Computer Name</label>
+            <input type="text" class="form-control" id="computerName" placeholder="Enter computer name" required>
+          </div>
+          <div class="form-group">
+            <label for="computerDeadline">Deadline</label>
+            <input type="datetime-local" class="form-control" id="computerDeadline" required>
+          </div>
+          <div class="form-group">
+            <label for="profileId">Profile</label>
+            <select class="form-control" id="profileId" required>
+              <option value="">Select a profile...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="technicianId">Technician</label>
+            <select class="form-control" id="technicianId" required>
+              <option value="">Select a technician...</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="submit-computer">Add Computer</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let page = 1;
+    const container = document.getElementById('computer-cards');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    let isLoading = false; // Flag to prevent multiple requests
+
+    function loadComputers() {
+        if (isLoading) return; // Exit if a request is already in progress
+        isLoading = true;
+        loadMoreBtn.style.display = 'none';
+        loadingSpinner.style.display = 'block';
+
+        fetch(`/api/computers?page=${page}`)
+            .then(response => response.json())
+            .then(computers => {
+                if (computers.length === 0) {
+                    loadMoreBtn.style.display = 'none'; // Hide button if no more data
+                } else {
+                    computers.forEach(computer => {
+                        fetch(`/api/computer_info/${encodeURIComponent(computer.name)}`)
+                            .then(response => response.json())
+                            .then(computerData => {
+                                if (!computerData.Error) {
+                                    const card = document.createElement('div');
+                                    card.className = 'col-md-4 mb-4';
+                                    // Calculate progress percentage (ensure it's a valid number)
+                                    let completed = parseInt(computerData.completed_steps_num) || 0;
+                                    let total = parseInt(computerData.total_step_num) || 0;
+                                    let progressPercentage = 0;
+                                    
+                                    if (total > 0) {
+                                        progressPercentage = Math.round((completed / total) * 100);
+                                    }
+                                    
+                                    // Create the card HTML with new progress bar design
+                                    card.innerHTML = `
+                                        <div class="card h-100">
+                                            <div class="card-header">
+                                                <h5 class="card-title mb-0">${computerData.name}</h5>
+                                            </div>
+                                            <div class="card-body d-flex flex-column">
+                                                <p class="mb-2"><strong>Profile:</strong> ${computerData.profile ? computerData.profile.name : 'No profile'}</p>
+                                                <p class="mb-2"><strong>Technician:</strong> ${computerData.technician ? computerData.technician.name : 'Unassigned'}</p>
+                                                <p class="mb-2"><strong>Deadline:</strong> ${computerData.deadline || 'Not set'}</p>
+                                                <p class="mb-3"><strong>Steps:</strong> ${completed}/${total} completed</p>
+                                                
+                                                <!-- Progress Section -->
+                                                <div class="progress-section mb-3">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="progress-label">Setup Progress</span>
+                                                        <span class="progress-percentage">${progressPercentage}%</span>
+                                                    </div>
+                                                    <div class="custom-progress-bar">
+                                                        <div class="progress-fill" style="width: ${progressPercentage}%"></div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="mt-auto">
+                                                    <a href="/configurations" class="btn btn-primary w-100">
+                                                        <i class="bi bi-arrow-right"></i> Continue Setup
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    container.appendChild(card);
+                                }
+                            });
+                    });
+                    loadMoreBtn.style.display = 'block';
+                }
+                isLoading = false;
+                loadingSpinner.style.display = 'none';
+            }).catch(() => {
+                isLoading = false;
+                loadingSpinner.style.display = 'none';
+            });
+    }
+
+    // Load initial computers
+    loadComputers();
+
+    // Add click event for Load More button
+    loadMoreBtn.addEventListener('click', function() {
+        page++;
+        loadComputers();
+    });
+
+    // Modal functionality
+    const addComputerBtn = document.getElementById('add-computer-btn');
+    const addComputerModal = document.getElementById('addComputerModal');
+    const submitComputerBtn = document.getElementById('submit-computer');
+    const addComputerForm = document.getElementById('add-computer-form');
+    const closeButtons = document.querySelectorAll('[data-dismiss="modal"]');
+
+    // Function to populate dropdowns
+    function populateDropdowns() {
+        // Populate profiles dropdown
+        fetch('/api/profiles')
+            .then(response => response.json())
+            .then(profiles => {
+                const profileSelect = document.getElementById('profileId');
+                profileSelect.innerHTML = '<option value="">Select a profile...</option>';
+                
+                if (profiles.Error) {
+                    console.error('Error fetching profiles:', profiles.Error);
+                    profileSelect.innerHTML += '<option value="" disabled>Error loading profiles</option>';
+                } else {
+                    profiles.forEach(profile => {
+                        const option = document.createElement('option');
+                        option.value = profile.id;
+                        option.textContent = `${profile.name}${profile.description ? ' - ' + profile.description : ''}`;
+                        profileSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching profiles:', error);
+                const profileSelect = document.getElementById('profileId');
+                profileSelect.innerHTML += '<option value="" disabled>Error loading profiles</option>';
+            });
+
+        // Populate technicians dropdown
+        fetch('/api/technicians')
+            .then(response => response.json())
+            .then(technicians => {
+                const technicianSelect = document.getElementById('technicianId');
+                technicianSelect.innerHTML = '<option value="">Select a technician...</option>';
+                
+                if (technicians.Error) {
+                    console.error('Error fetching technicians:', technicians.Error);
+                    technicianSelect.innerHTML += '<option value="" disabled>Error loading technicians</option>';
+                } else {
+                    technicians.forEach(technician => {
+                        const option = document.createElement('option');
+                        option.value = technician.id;
+                        option.textContent = technician.name;
+                        technicianSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching technicians:', error);
+                const technicianSelect = document.getElementById('technicianId');
+                technicianSelect.innerHTML += '<option value="" disabled>Error loading technicians</option>';
+            });
+    }
+
+    // Show modal
+    addComputerBtn.addEventListener('click', function() {
+        addComputerModal.style.display = 'block';
+        addComputerModal.classList.add('show');
+        document.body.classList.add('modal-open');
+        
+        // Populate dropdowns when modal opens
+        populateDropdowns();
+    });
+
+    // Hide modal
+    function hideModal() {
+        addComputerModal.style.display = 'none';
+        addComputerModal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        addComputerForm.reset();
+    }
+
+    // Close modal events
+    closeButtons.forEach(button => {
+        button.addEventListener('click', hideModal);
+    });
+
+    // Close modal when clicking outside
+    addComputerModal.addEventListener('click', function(e) {
+        if (e.target === addComputerModal) {
+            hideModal();
+        }
+    });
+
+    // Handle form submission
+    submitComputerBtn.addEventListener('click', function() {
+        const formData = {
+            name: document.getElementById('computerName').value,
+            deadline: document.getElementById('computerDeadline').value,
+            profile_id: parseInt(document.getElementById('profileId').value),
+            technician_id: parseInt(document.getElementById('technicianId').value)
+        };
+        
+        console.log('Form data before validation:', formData);
+
+        // Basic validation
+        if (!formData.name || !formData.deadline || !formData.profile_id || !formData.technician_id) {
+            alert('Please fill in all fields');
+            return;
+        }
+
+        // Additional validation for numeric fields
+        if (isNaN(formData.profile_id) || isNaN(formData.technician_id) || 
+            formData.profile_id <= 0 || formData.technician_id <= 0) {
+            alert('Please select valid profile and technician');
+            return;
+        }
+
+        // Convert datetime-local to the expected format
+        const dateObject = new Date(formData.deadline);
+        formData.deadline = dateObject.getFullYear() + '-' + 
+                           String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(dateObject.getDate()).padStart(2, '0') + ' ' + 
+                           String(dateObject.getHours()).padStart(2, '0') + ':' + 
+                           String(dateObject.getMinutes()).padStart(2, '0') + ':' + 
+                           String(dateObject.getSeconds()).padStart(2, '0');
+
+        // Show loading state
+        submitComputerBtn.disabled = true;
+        submitComputerBtn.textContent = 'Adding...';
+
+        // Send request to API
+        fetch('/api/add_computer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                // Handle non-200 responses
+                return response.json().then(errorData => {
+                    throw new Error(errorData.Error || `HTTP ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.message) {
+                alert('Computer added successfully!');
+                hideModal();
+                // Reload the computers list
+                container.innerHTML = '';
+                page = 1;
+                loadComputers();
+            } else if (data.Error) {
+                alert('Error: ' + data.Error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + (error.message || 'An error occurred while adding the computer'));
+        })
+        .finally(() => {
+            // Reset button state
+            submitComputerBtn.disabled = false;
+            submitComputerBtn.textContent = 'Add Computer';
+        });
+    });
+});
+</script>
+
+{% endblock %}

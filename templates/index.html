@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Config Matrix - PC Setup Manager{% endblock %}
+
+{% block content %}
+<div class="container-center">
+    <div class="text-center">
+        <h1 class="display-4 mb-4">Config Matrix</h1>
+        <p class="lead mb-4">Professional PC Setup Management System</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Welcome to Config Matrix</h5>
+                        <p class="card-text">
+                            Manage computer setups, track progress, and coordinate technician assignments 
+                            with our comprehensive PC setup management platform.
+                        </p>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                            <a href="{{ url_for('login') }}" class="btn btn-primary me-md-2">Login</a>
+                            <a href="{{ url_for('register') }}" class="btn btn-outline-secondary">Register</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
