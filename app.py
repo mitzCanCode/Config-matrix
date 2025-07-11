@@ -188,7 +188,7 @@ def api_computers():
     try:
         # Load all computers at once instead of using pagination
         computers = local_session.query(Computers).all()
-        computer_list = [{"name": c.name} for c in computers]
+        computer_list = [{"name": c.name, "technician_id": c.technician_id} for c in computers]
         return app.response_class(
             response=json.dumps(computer_list),
             status=200,

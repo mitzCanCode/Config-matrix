@@ -39,11 +39,35 @@
         <div class="row">
             <div class="col-12">
                 <h1 class="mb-4">Computers</h1>
+                
+                <!-- Computer actions area -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <label for="computerSearch" class="form-label">Search by Computer Name:</label>
+                        <input type="text" class="form-control" id="computerSearch" placeholder="Enter computer name...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="technicianFilter" class="form-label">Filter by Technician:</label>
+                        <select class="form-control" id="technicianFilter">
+                            <option value="">All Technicians</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 offset-md-3 d-flex flex-column justify-content-end">
+                        <button id="add-computer-btn" class="btn btn-success">Add Computer</button>
+                    </div>
+                </div>
+                
+                <!-- No computers message (initially hidden) -->
+                <div id="no-computers-message" class="row" style="display: none;">
+                    <div class="col-12 text-center">
+                        <p class="text-muted">No computers to show</p>
+                    </div>
+                </div>
+                
                 <div class="row" id="computer-cards">
                     <!-- Dynamic content will be loaded here -->
                 </div>
 <div class="text-center mt-4">
-    <button id="add-computer-btn" class="btn btn-success mb-4">Add Computer</button>
     <div id="loading-spinner" style="display:none;">
         <div class="spinner-border" role="status">
             <span class="sr-only">Loading...</span>
@@ -70,6 +94,7 @@
           <div class="form-group">
             <label for="computerDeadline">Deadline</label>
             <input type="datetime-local" class="form-control" id="computerDeadline" required>
+            <small class="form-text text-muted">Will be displayed as dd/mm/yy at hh:mm</small>
           </div>
           <div class="form-group">
             <label for="profileId">Profile</label>
@@ -101,7 +126,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('computer-cards');
     const loadingSpinner = document.getElementById('loading-spinner');
+    const noComputersMessage = document.getElementById('no-computers-message');
+    const technicianFilter = document.getElementById('technicianFilter');
+    const computerSearch = document.getElementById('computerSearch');
     let isLoading = false; // Flag to prevent multiple requests
+    let allComputers = []; // Store all computer data for filtering
+    let currentFilterId = 0; // Track current filter operation to avoid race conditions
     
     // Toast notification function
     function showToast(message, type = 'success') {
@@ -131,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add toast to container
         toastContainer.appendChild(toast);
         
-        // Auto-remove after 5 seconds
+        // Auto-remove after 10 seconds
         setTimeout(() => {
             if (document.getElementById(toastId)) {
                 toast.classList.remove('show');
@@ -141,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }, 150);
             }
-        }, 5000);
+        }, 10000);
     }
 
     function loadComputers() {
@@ -152,69 +182,147 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/api/computers')
             .then(response => response.json())
             .then(computers => {
-                if (computers.length === 0) {
-                    container.innerHTML = '<div class="col-12 text-center"><p>No computers found.</p></div>';
-                } else {
-                    // Add small delays between requests to reduce session conflicts
-                    computers.forEach((computer, index) => {
-                        setTimeout(() => {
-                            fetch(`/api/computer_info/${encodeURIComponent(computer.name)}`)
-                                .then(response => response.json())
-                                .then(computerData => {
-                                if (!computerData.Error) {
-                                    const card = document.createElement('div');
-                                    card.className = 'col-md-4 mb-4';
-                                    // Calculate progress percentage (ensure it's a valid number)
-                                    let completed = parseInt(computerData.completed_steps_num) || 0;
-                                    let total = parseInt(computerData.total_step_num) || 0;
-                                    let progressPercentage = 0;
-                                    
-                                    if (total > 0) {
-                                        progressPercentage = Math.round((completed / total) * 100);
-                                    }
-                                    
-                                    // Create the card HTML with new progress bar design
-                                    card.innerHTML = `
-                                        <div class="card h-100">
-                                            <div class="card-header">
-                                                <h5 class="card-title mb-0">${computerData.name}</h5>
-                                            </div>
-                                            <div class="card-body d-flex flex-column">
-                                                <p class="mb-2"><strong>Profile:</strong> ${computerData.profile ? computerData.profile.name : 'No profile'}</p>
-                                                <p class="mb-2"><strong>Technician:</strong> ${computerData.technician ? computerData.technician.name : 'Unassigned'}</p>
-                                                <p class="mb-2"><strong>Deadline:</strong> ${computerData.deadline || 'Not set'}</p>
-                                                <p class="mb-3"><strong>Steps:</strong> ${completed}/${total} completed</p>
-                                                
-                                                <!-- Progress Section -->
-                                                <div class="progress-section mb-3">
-                                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                                        <span class="progress-label">Setup Progress</span>
-                                                        <span class="progress-percentage">${progressPercentage}%</span>
-                                                    </div>
-                                                    <div class="custom-progress-bar">
-                                                        <div class="progress-fill" style="width: ${progressPercentage}%"></div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="mt-auto">
-                                                    <a href="/configurations" class="btn btn-primary w-100">
-                                                        <i class="bi bi-arrow-right"></i> Continue Setup
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `;
-                                    container.appendChild(card);
-                                }
-                            });
-                        }, index * 50); // 50ms delay between each request
-                    });
-                }
+                allComputers = computers;
+                filterComputers();
+                populateTechnicians();
+
                 isLoading = false;
                 loadingSpinner.style.display = 'none';
             }).catch(() => {
                 isLoading = false;
                 loadingSpinner.style.display = 'none';
+            });
+    }
+
+    technicianFilter.addEventListener('change', filterComputers);
+    computerSearch.addEventListener('input', filterComputers);
+
+    // Function to get deadline styling based on time remaining
+    function getDeadlineStyle(deadlineStr) {
+        if (!deadlineStr || deadlineStr === 'Not set') {
+            return { text: 'Not set', class: '', color: '' };
+        }
+
+        const now = new Date();
+        const deadline = new Date(deadlineStr);
+        const timeDiff = deadline - now;
+        const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+        // Format deadline as dd/mm/yy at hh:mm
+        const day = String(deadline.getDate()).padStart(2, '0');
+        const month = String(deadline.getMonth() + 1).padStart(2, '0');
+        const year = String(deadline.getFullYear()).slice(-2);
+        const hours = String(deadline.getHours()).padStart(2, '0');
+        const minutes = String(deadline.getMinutes()).padStart(2, '0');
+        const formattedDate = `${day}/${month}/${year} at ${hours}:${minutes}`;
+
+        let text = formattedDate;
+        let colorClass = '';
+        let style = '';
+
+        if (timeDiff < 0) {
+            // Overdue
+            text = `${formattedDate} (overdue)`;
+            colorClass = 'text-danger';
+            style = 'color: #dc3545; font-weight: bold;';
+        } else if (daysDiff === 0) {
+            // Same day
+            colorClass = 'text-danger';
+            style = 'color: #dc3545; font-weight: bold;';
+        } else if (daysDiff < 7) {
+            // Less than a week
+            colorClass = 'text-warning';
+            style = 'color: #fd7e14; font-weight: bold;';
+        } else {
+            // More than a week
+            colorClass = 'text-success';
+            style = 'color: #198754; font-weight: bold;';
+        }
+
+        return { text, class: colorClass, style };
+    }
+
+    function filterComputers() {
+        const selectedTechnicianId = technicianFilter.value;
+        const searchTerm = computerSearch.value.toLowerCase().trim();
+        
+        // Increment filter ID to track this specific filter operation
+        const filterId = ++currentFilterId;
+        
+        const filteredComputers = allComputers.filter(computer => {
+            // Filter by technician
+            const technicianMatch = !selectedTechnicianId || computer.technician_id === parseInt(selectedTechnicianId);
+            // Filter by name search - using startsWith instead of includes
+            const nameMatch = !searchTerm || computer.name.toLowerCase().startsWith(searchTerm);
+            
+            return technicianMatch && nameMatch;
+        });
+
+        container.innerHTML = '';
+        noComputersMessage.style.display = filteredComputers.length === 0 ? 'block' : 'none';
+
+        filteredComputers.forEach((computer, index) => {
+            setTimeout(() => {
+                fetch(`/api/computer_info/${encodeURIComponent(computer.name)}`)
+                    .then(response => response.json())
+                    .then(computerData => {
+                    // Only add card if this is still the current filter operation
+                    if (!computerData.Error && filterId === currentFilterId) {
+                        const card = document.createElement('div');
+                        card.className = 'col-md-4 mb-4';
+                        let completed = parseInt(computerData.completed_steps_num) || 0;
+                        let total = parseInt(computerData.total_step_num) || 0;
+                        let progressPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+                        
+                        // Get deadline styling
+                        const deadlineStyle = getDeadlineStyle(computerData.deadline);
+                        
+                        card.innerHTML = `
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">${computerData.name}</h5>
+                                </div>
+                                <div class="card-body d-flex flex-column">
+                                    <p class="mb-2"><strong>Profile:</strong> ${computerData.profile ? computerData.profile.name : 'No profile'}</p>
+                                    <p class="mb-2"><strong>Technician:</strong> ${computerData.technician ? computerData.technician.name : 'Unassigned'}</p>
+                                    <p class="mb-2"><strong>Deadline:</strong> <span class="${deadlineStyle.class}" style="${deadlineStyle.style}">${deadlineStyle.text}</span></p>
+                                    <p class="mb-3"><strong>Steps:</strong> ${completed}/${total} completed</p>
+                                    <div class="progress-section mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="progress-label">Setup Progress</span>
+                                            <span class="progress-percentage">${progressPercentage}%</span>
+                                        </div>
+                                        <div class="custom-progress-bar">
+                                            <div class="progress-fill" style="width: ${progressPercentage}%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-auto">
+                                        <a href="/configurations" class="btn btn-primary w-100">
+                                            <i class="bi bi-arrow-right"></i> Continue Setup
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    }
+                });
+            }, index * 50); // 50ms delay between each request
+        });
+    }
+
+    function populateTechnicians() {
+        fetch('/api/technicians')
+            .then(response => response.json())
+            .then(technicians => {
+                if (!technicians.Error) {
+                    technicians.forEach(technician => {
+                        const option = document.createElement('option');
+                        option.value = technician.id;
+                        option.textContent = technician.name;
+                        technicianFilter.appendChild(option);
+                    });
+                }
             });
     }
 
@@ -340,6 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Please enter a valid deadline date and time', 'error');
                 return;
             }
+            // Format as YYYY-MM-DD HH:MM:SS for database storage
             formData.deadline = dateObject.getFullYear() + '-' + 
                                String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
                                String(dateObject.getDate()).padStart(2, '0') + ' ' + 
