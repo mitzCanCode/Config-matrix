@@ -478,7 +478,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
                     return response.json().then(errorData => {
-                        throw new Error(errorData.Error || `HTTP ${response.status}: ${response.statusText}`);
+                        if (response.status === 409) {
+                            // Handle duplicate computer name error
+                            throw new Error('A computer with this name already exists. Please choose a different name.');
+                        }
+                        // Handle other JSON errors
+                        throw new Error(errorData.Error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
                     });
                 } else {
                     // Handle HTML error pages (like CSRF errors)
