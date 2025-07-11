@@ -44,7 +44,6 @@
                 </div>
 <div class="text-center mt-4">
     <button id="add-computer-btn" class="btn btn-success mb-4">Add Computer</button>
-    <button id="load-more-btn" class="btn btn-primary" style="display:none; margin-bottom: 20px;">Load More Computers</button>
     <div id="loading-spinner" style="display:none;">
         <div class="spinner-border" role="status">
             <span class="sr-only">Loading...</span>
@@ -100,28 +99,68 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let page = 1;
     const container = document.getElementById('computer-cards');
-    const loadMoreBtn = document.getElementById('load-more-btn');
     const loadingSpinner = document.getElementById('loading-spinner');
     let isLoading = false; // Flag to prevent multiple requests
+    
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'position-fixed top-0 end-0 p-3 toast-container';
+            toastContainer.style.zIndex = '9999';
+            toastContainer.style.pointerEvents = 'none';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toastId = 'toast-' + Date.now();
+        const alertClass = type === 'error' ? 'danger' : 'success';
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `alert alert-${alertClass} alert-dismissible fade show`;
+        toast.setAttribute('role', 'alert');
+        toast.style.pointerEvents = 'auto';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Add toast to container
+        toastContainer.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (document.getElementById(toastId)) {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 150);
+            }
+        }, 5000);
+    }
 
     function loadComputers() {
         if (isLoading) return; // Exit if a request is already in progress
         isLoading = true;
-        loadMoreBtn.style.display = 'none';
         loadingSpinner.style.display = 'block';
 
-        fetch(`/api/computers?page=${page}`)
+        fetch('/api/computers')
             .then(response => response.json())
             .then(computers => {
                 if (computers.length === 0) {
-                    loadMoreBtn.style.display = 'none'; // Hide button if no more data
+                    container.innerHTML = '<div class="col-12 text-center"><p>No computers found.</p></div>';
                 } else {
-                    computers.forEach(computer => {
-                        fetch(`/api/computer_info/${encodeURIComponent(computer.name)}`)
-                            .then(response => response.json())
-                            .then(computerData => {
+                    // Add small delays between requests to reduce session conflicts
+                    computers.forEach((computer, index) => {
+                        setTimeout(() => {
+                            fetch(`/api/computer_info/${encodeURIComponent(computer.name)}`)
+                                .then(response => response.json())
+                                .then(computerData => {
                                 if (!computerData.Error) {
                                     const card = document.createElement('div');
                                     card.className = 'col-md-4 mb-4';
@@ -168,8 +207,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     container.appendChild(card);
                                 }
                             });
+                        }, index * 50); // 50ms delay between each request
                     });
-                    loadMoreBtn.style.display = 'block';
                 }
                 isLoading = false;
                 loadingSpinner.style.display = 'none';
@@ -179,14 +218,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Load initial computers
+    // Load all computers at once
     loadComputers();
-
-    // Add click event for Load More button
-    loadMoreBtn.addEventListener('click', function() {
-        page++;
-        loadComputers();
-    });
 
     // Modal functionality
     const addComputerBtn = document.getElementById('add-computer-btn');
@@ -250,7 +283,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show modal
     addComputerBtn.addEventListener('click', function() {
-        addComputerModal.style.display = 'block';
         addComputerModal.classList.add('show');
         document.body.classList.add('modal-open');
         
@@ -260,7 +292,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Hide modal
     function hideModal() {
-        addComputerModal.style.display = 'none';
         addComputerModal.classList.remove('show');
         document.body.classList.remove('modal-open');
         addComputerForm.reset();
@@ -291,25 +322,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Basic validation
         if (!formData.name || !formData.deadline || !formData.profile_id || !formData.technician_id) {
-            alert('Please fill in all fields');
+            showToast('Please fill in all fields', 'error');
             return;
         }
 
         // Additional validation for numeric fields
         if (isNaN(formData.profile_id) || isNaN(formData.technician_id) || 
             formData.profile_id <= 0 || formData.technician_id <= 0) {
-            alert('Please select valid profile and technician');
+            showToast('Please select valid profile and technician', 'error');
             return;
         }
 
         // Convert datetime-local to the expected format
-        const dateObject = new Date(formData.deadline);
-        formData.deadline = dateObject.getFullYear() + '-' + 
-                           String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
-                           String(dateObject.getDate()).padStart(2, '0') + ' ' + 
-                           String(dateObject.getHours()).padStart(2, '0') + ':' + 
-                           String(dateObject.getMinutes()).padStart(2, '0') + ':' + 
-                           String(dateObject.getSeconds()).padStart(2, '0');
+        try {
+            const dateObject = new Date(formData.deadline);
+            if (isNaN(dateObject.getTime())) {
+                showToast('Please enter a valid deadline date and time', 'error');
+                return;
+            }
+            formData.deadline = dateObject.getFullYear() + '-' + 
+                               String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(dateObject.getDate()).padStart(2, '0') + ' ' + 
+                               String(dateObject.getHours()).padStart(2, '0') + ':' + 
+                               String(dateObject.getMinutes()).padStart(2, '0') + ':' + 
+                               String(dateObject.getSeconds()).padStart(2, '0');
+        } catch (error) {
+            showToast('Please enter a valid deadline date and time', 'error');
+            return;
+        }
 
         // Show loading state
         submitComputerBtn.disabled = true;
@@ -326,27 +366,37 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => {
             if (!response.ok) {
                 // Handle non-200 responses
-                return response.json().then(errorData => {
-                    throw new Error(errorData.Error || `HTTP ${response.status}: ${response.statusText}`);
-                });
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.Error || `HTTP ${response.status}: ${response.statusText}`);
+                    });
+                } else {
+                    // Handle HTML error pages (like CSRF errors)
+                    return response.text().then(htmlText => {
+                        if (htmlText.includes('CSRF') || htmlText.includes('csrf')) {
+                            throw new Error('Security token expired. Please refresh the page and try again.');
+                        }
+                        throw new Error(`Server error (${response.status}): Please try again or contact support.`);
+                    });
+                }
             }
             return response.json();
         })
         .then(data => {
             if (data.message) {
-                alert('Computer added successfully!');
+                showToast('Computer added successfully!', 'success');
                 hideModal();
                 // Reload the computers list
                 container.innerHTML = '';
-                page = 1;
                 loadComputers();
             } else if (data.Error) {
-                alert('Error: ' + data.Error);
+                showToast('Error: ' + data.Error, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error: ' + (error.message || 'An error occurred while adding the computer'));
+            showToast('Error: ' + (error.message || 'An error occurred while adding the computer'), 'error');
         })
         .finally(() => {
             // Reset button state

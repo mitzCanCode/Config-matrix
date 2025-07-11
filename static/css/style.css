@@ -530,44 +530,6 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--accent-green);
 }
 
-/* Modal Styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1055;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    transition: opacity 0.3s ease;
-}
-
-.modal.show {
-    opacity: 1;
-}
-
-.modal-dialog {
-    position: relative;
-    width: auto;
-    margin: 1.75rem;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.modal-content {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    color: var(--text-primary);
-    position: relative;
-    animation: modalSlideIn 0.3s ease-out;
-}
 
 @keyframes modalSlideIn {
     from {
@@ -681,16 +643,68 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: none !important;
 }
 
-/* Body modal open state */
+/* Simple modal styling - centered window */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1055;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+/* Prevent background scrolling when modal is open */
 body.modal-open {
     overflow: hidden;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-dialog {
+    position: relative;
+    width: 90%;
+    max-width: 500px;
+    margin: 20px;
+}
+
+.modal-content {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    color: var(--text-primary);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+/* Toast container to ensure it appears above modal */
+.toast-container {
+    z-index: 9999 !important;
+    position: fixed !important;
+    filter: none !important;
+    backdrop-filter: none !important;
 }
 
 /* Responsive modal */
 @media (max-width: 768px) {
     .modal-dialog {
-        margin: 1rem;
-        width: calc(100% - 2rem);
+        width: calc(100vw - 2rem);
+        max-width: calc(100vw - 2rem);
+    }
+    
+    .modal-content {
+        width: 100%;
+        max-height: 85vh;
     }
     
     .modal-header,

@@ -26,10 +26,14 @@ app.config['SESSION_COOKIE_SECURE'] = False ### SET TO TRUE IN REAL ENV
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 # Set the SameSite policy to 'Lax' to help avoid CSRF attacks
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Ensures the session cookie is not sent with most cross-site requests, except top-level navigations
+# Session configuration for better concurrent handling
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour session timeout
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session on each request
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 csrf = CSRFProtect(app)
 login_manager.login_view = 'login'  # type: ignore
+login_manager.session_protection = 'strong'  # Strong session protection
 
 class RegisterForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -73,14 +77,20 @@ class User(UserMixin):
 # User loader function for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
+    # Create a separate session for user loading to avoid conflicts
+    from config_mtrx_module.db import Session
+    user_session = Session()
+    
     try:
-        technician = session.query(Technicians).filter_by(id=int(user_id)).first()
+        technician = user_session.query(Technicians).filter_by(id=int(user_id)).first()
         if technician:
             return User(technician.id, technician.name)
         return None
     except Exception as e:
         print(f"Error loading user {user_id}: {e}")
         return None
+    finally:
+        user_session.close()
 
 # Routes
 @app.route('/')
@@ -171,11 +181,13 @@ def api_computer_info(computer_name):
 @app.route('/api/computers', methods=['GET'])
 @login_required
 def api_computers():
+    # Create a new session for this request
+    from config_mtrx_module.db import Session
+    local_session = Session()
+    
     try:
-        page = int(request.args.get('page', 1))
-        per_page = 10
-        offset = (page - 1) * per_page
-        computers = session.query(Computers).offset(offset).limit(per_page).all()
+        # Load all computers at once instead of using pagination
+        computers = local_session.query(Computers).all()
         computer_list = [{"name": c.name} for c in computers]
         return app.response_class(
             response=json.dumps(computer_list),
@@ -189,8 +201,11 @@ def api_computers():
             status=500,
             mimetype='application/json'
         )
+    finally:
+        local_session.close()
         
 @app.route('/api/add_computer', methods=['POST'])
+@csrf.exempt
 @login_required
 def add_api_computers():
     try:
@@ -317,57 +332,68 @@ def computers():
     return render_template('computers.html')
 
 def computer_info(computer_name) -> dict:
+    # Create a new session for this request to avoid concurrent access issues
+    from config_mtrx_module.db import Session
+    local_session = Session()
+    
     try:
+        # Fetch computer record once with all relationships
+        computer_record = local_session.query(Computers).filter_by(name=computer_name).first()
+        if not computer_record:
+            return {"Error": f"Computer '{computer_name}' not found", "code": 404}
+        
         computer = {}
         computer["name"] = computer_name
         
-        # Fetch profile with error handling
+        # Fetch profile information
         try:
-            computer_record = session.query(Computers).filter_by(name=computer_name).first()
-            if not computer_record:
-                return {"Error": f"Computer '{computer_name}' not found", "code": 404}
             computer["profile"] = {"name": computer_record.profile.name} if computer_record.profile else None
         except Exception as e:
             print(f"Error fetching profile for {computer_name}: {e}")
             return {"Error": f"Profile fetch failed: {str(e)}", "code": 500}
 
-        # Fetch progress with error handling
+        # Fetch progress information
         try:
-            progress_fetch_ok, steps, code = get_computer_progress(computer_name=computer_name)
-            if progress_fetch_ok:
-                computer["completed_steps_num"] = len(steps["completed_steps"])
-                computer["remaining_steps_num"] = len(steps["remaining_steps"])
-                computer["total_step_num"] = len(steps["remaining_steps"]) + len(steps["completed_steps"])
-                computer["completed_steps"] = [step.name for step in steps["completed_steps"]]
-                computer["remaining_steps"] = [step.name for step in steps["remaining_steps"]]
-            else:
-                return {"Error": steps, "code": code}
+            completed_steps = computer_record.setup_steps
+            profile = computer_record.profile
+            
+            if not profile:
+                return {"Error": f"No profile associated with '{computer_name}'", "code": 404}
+            
+            total_steps = profile.setup_steps_to_follow
+            remaining_steps = [step for step in total_steps if step not in completed_steps]
+            
+            computer["completed_steps_num"] = len(completed_steps)
+            computer["remaining_steps_num"] = len(remaining_steps)
+            computer["total_step_num"] = len(remaining_steps) + len(completed_steps)
+            computer["completed_steps"] = [step.name for step in completed_steps]
+            computer["remaining_steps"] = [step.name for step in remaining_steps]
         except Exception as e:
             print(f"Error fetching progress for {computer_name}: {e}")
             return {"Error": f"Progress fetch failed: {str(e)}", "code": 500}
         
-        # Fetch technician with error handling
+        # Fetch technician information
         try:
-            technician_fetch_ok, message, technician, code = get_computer_assigned_technician(computer_name=computer_name)
-            if technician_fetch_ok:
-                computer["technician"] = {"name": technician.name} if technician else None
+            if not computer_record.technician_id: # type: ignore
+                computer["technician"] = None
             else:
-                return {"Error": message, "code": code}
+                technician = computer_record.technician
+                computer["technician"] = {"name": technician.name} if technician else None
         except Exception as e:
             print(f"Error fetching technician for {computer_name}: {e}")
             return {"Error": f"Technician fetch failed: {str(e)}", "code": 500}
         
-        # Fetch deadline with error handling
+        # Fetch deadline information
         try:
-            deadline_fetch_ok, message, deadline, code = get_computer_deadline(computer_name=computer_name)
-            if deadline_fetch_ok:
+            deadline = computer_record.deadline
+            if deadline: # type: ignore
                 try:
-                    computer["deadline"] = deadline.strftime("%Y-%m-%d %H:%M:%S") if deadline else None
+                    computer["deadline"] = deadline.strftime("%Y-%m-%d %H:%M:%S")
                 except (AttributeError, TypeError):
                     # If deadline is not a datetime object, convert to string
-                    computer["deadline"] = str(deadline) if deadline else None
+                    computer["deadline"] = str(deadline)
             else:
-                return {"Error": message, "code": code}
+                computer["deadline"] = None
         except Exception as e:
             print(f"Error fetching deadline for {computer_name}: {e}")
             return {"Error": f"Deadline fetch failed: {str(e)}", "code": 500}
@@ -376,6 +402,9 @@ def computer_info(computer_name) -> dict:
     except Exception as e:
         print(f"Unexpected error in computer_info for {computer_name}: {e}")
         return {"Error": f"Unexpected error: {str(e)}", "code": 500}
+    finally:
+        # Always close the local session
+        local_session.close()
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", debug=True, port=9999)
