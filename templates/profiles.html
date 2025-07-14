@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Profiles - Config Matrix{% endblock %}
+
+{% block content %}
+
+<!-- Modern Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-main">
+        <a href="/dashboard" class="sidebar-item" data-tooltip="Dashboard">
+            <i class="bi bi-house-door"></i>
+            <span class="sidebar-text">Dashboard</span>
+        </a>
+        <a href="/computers" class="sidebar-item" data-tooltip="Computers">
+            <i class="bi bi-pc-display"></i>
+            <span class="sidebar-text">Computers</span>
+        </a>
+        <a href="/profiles" class="sidebar-item active" data-tooltip="Profiles">
+            <i class="bi bi-collection"></i>
+            <span class="sidebar-text">Profiles</span>
+        </a>
+    </div>
+    <div class="sidebar-bottom">
+        <a href="/help" class="sidebar-item" data-tooltip="Help">
+            <i class="bi bi-question-circle"></i>
+            <span class="sidebar-text">Help</span>
+        </a>
+        <a href="/logout" class="sidebar-item" data-tooltip="Logout">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="sidebar-text">Logout</span>
+        </a>
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <h1 class="mb-0">Profiles</h1>
+                    <button class="btn btn-primary" onclick="createNewProfile()">
+                        <i class="bi bi-plus-circle"></i> New Profile
+                    </button>
+                </div>
+                
+                <!-- Loading spinner -->
+                <div id="loading-spinner" class="text-center" style="display: block;">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading profiles...</p>
+                </div>
+                
+                <!-- Error message container -->
+                <div id="error-container" style="display: none;">
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading">Error</h4>
+                        <p id="error-message"></p>
+                    </div>
+                </div>
+                
+                <!-- Main content container -->
+                <div id="profiles-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Available Profiles</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="profiles-list" class="list-group">
+                                <!-- Profiles will be dynamically populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const errorContainer = document.getElementById('error-container');
+    const errorMessage = document.getElementById('error-message');
+    const profilesContent = document.getElementById('profiles-content');
+    
+    // Load profiles
+    function loadProfiles() {
+        loadingSpinner.style.display = 'block';
+        errorContainer.style.display = 'none';
+        profilesContent.style.display = 'none';
+        
+        fetch('/api/profiles')
+            .then(response => response.json())
+            .then(data => {
+                if (data.Error) {
+                    throw new Error(data.Error);
+                }
+                
+                const profilesList = document.getElementById('profiles-list');
+                profilesList.innerHTML = '';
+                
+                if (data.length === 0) {
+                    profilesList.innerHTML = '<div class="text-muted text-center p-4 rounded" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">No profiles available. Create your first profile to get started.</div>';
+                } else {
+                    data.forEach((profile, index) => {
+                        const profileItem = document.createElement('div');
+                        profileItem.className = 'list-group-item d-flex justify-content-between align-items-center rounded mb-3 shadow-sm';
+                        profileItem.style.cssText = `
+                            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+                            border: 1px solid var(--border-color);
+                            transition: all 0.3s ease;
+                        `;
+                        
+                        // Add hover effects
+                        profileItem.addEventListener('mouseenter', function() {
+                            this.style.transform = 'translateY(-2px)';
+                            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                        });
+                        
+                        profileItem.addEventListener('mouseleave', function() {
+                            this.style.transform = 'translateY(0)';
+                            this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+                        });
+                        
+                        profileItem.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <div class="profile-icon me-3" style="
+                                    width: 48px;
+                                    height: 48px;
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    border-radius: 12px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    color: white;
+                                    font-weight: bold;
+                                    font-size: 1.2rem;
+                                ">
+                                    <i class="bi bi-collection"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1" style="color: var(--text-primary);">${profile.name}</h6>
+                                    <p class="mb-0" style="color: var(--text-secondary); font-size: 0.9rem;">
+                                        <i class="bi bi-list-task me-1"></i>
+                                        ${profile.step_count} setup step${profile.step_count !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm" onclick="editProfile(${profile.id})" style="
+                                border-color: var(--accent-purple);
+                                color: var(--accent-purple);
+                                transition: all 0.3s ease;
+                            " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                        `;
+                        profilesList.appendChild(profileItem);
+                    });
+                }
+                
+                // Show content
+                loadingSpinner.style.display = 'none';
+                profilesContent.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error loading profiles:', error);
+                errorMessage.textContent = error.message || 'Failed to load profiles. Please try again later.';
+                loadingSpinner.style.display = 'none';
+                errorContainer.style.display = 'block';
+            });
+    }
+    
+    // Edit profile function
+    function editProfile(profileId) {
+        window.location.href = `/edit-profile/${profileId}`;
+    }
+    
+    // Create new profile function
+    function createNewProfile() {
+        // For now, just redirect to a placeholder
+        alert('Profile creation feature coming soon!');
+    }
+    
+    // Make functions available globally
+    window.editProfile = editProfile;
+    window.createNewProfile = createNewProfile;
+    
+    // Load initial data
+    loadProfiles();
+});
+</script>
+{% endblock %}
+

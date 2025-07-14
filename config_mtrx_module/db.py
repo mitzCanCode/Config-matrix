@@ -26,6 +26,14 @@ computer_step_association = Table(
     Column('step_id', Integer, ForeignKey('setup_steps.id'))
 )
 
+# Association table: Computers <-> Technicians (many-to-many)
+computer_technician_association = Table(
+    'computer_technician_association',
+    Base.metadata,
+    Column('computer_id', Integer, ForeignKey('computers.id')),
+    Column('technician_id', Integer, ForeignKey('technicians.id'))
+)
+
 class Technicians(Base):
     __tablename__ = 'technicians'
 
@@ -33,7 +41,12 @@ class Technicians(Base):
     name = Column(String, nullable=False)
     password = Column(String, nullable=False)
 
-    # One-to-many relationship with computers
+    # Many-to-many relationship with computers
+    assigned_computers = relationship(
+        "Computers", secondary=computer_technician_association, back_populates="technicians"
+    )
+    
+    # Keep the old one-to-many relationship for backward compatibility (deprecated)
     computers = relationship("Computers", back_populates="technician")
 
 class Computers(Base):
@@ -43,10 +56,19 @@ class Computers(Base):
     name = Column(String)
     deadline = Column(DateTime)
     profile_id = Column(Integer, ForeignKey('profiles.id'), nullable=True)
-    technician_id = Column(Integer, ForeignKey('technicians.id'), nullable=True)
+    technician_id = Column(Integer, ForeignKey('technicians.id'), nullable=True)  # Keep for backward compatibility
+    notes = Column(String, nullable=True)
 
     profile = relationship("Profiles", back_populates="computers")
+    
+    # Many-to-many relationship with technicians
+    technicians = relationship(
+        "Technicians", secondary=computer_technician_association, back_populates="assigned_computers"
+    )
+    
+    # Keep the old one-to-many relationship for backward compatibility (deprecated)
     technician = relationship("Technicians", back_populates="computers")
+    
     setup_steps = relationship(
         "SetupSteps", secondary=computer_step_association, back_populates="completed_by"
     )

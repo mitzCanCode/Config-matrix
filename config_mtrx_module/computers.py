@@ -229,18 +229,18 @@ def create_computer(name: str, deadline: datetime, profile_id: int, technician_n
         session.rollback()
         return (False, f"Computer ({name}) creation failed", 500)
 
-def create_computer_by_id(name: str, deadline: datetime, profile_id: int, technician_id: int) -> tuple:
-    """Create a computer using technician ID instead of name"""
+def create_computer_with_multiple_technicians(name: str, deadline: datetime, profile_id: int, technician_ids: list) -> tuple:
+    """Create a computer and assign multiple technicians by IDs"""
     try:
         # Check if computer name already exists
         existing_computer = session.query(Computers).filter_by(name=name).first()
         if existing_computer:
             return (False, f"Computer '{name}' already exists", 409)
         
-        # Find technician by ID
-        technician = session.query(Technicians).filter_by(id=technician_id).first()
-        if not technician:
-            return (False, f"Technician with ID {technician_id} not found", 404)
+        # Verify technicians exist
+        technicians = session.query(Technicians).filter(Technicians.id.in_(technician_ids)).all()
+        if not technicians or len(technicians) != len(technician_ids):
+            return (False, "Some technician IDs are invalid", 404)
         
         # Check if profile exists
         from .profiles import retrieve_all_profiles
@@ -256,12 +256,16 @@ def create_computer_by_id(name: str, deadline: datetime, profile_id: int, techni
             name = name,
             deadline = deadline,
             profile_id = profile_id,
-            technician_id = technician.id,
             setup_steps = []
         )
+
+        # Assign technicians
+        new_computer.technicians.extend(technicians)
+
         session.add(new_computer)
         session.commit()
-        return (True, f"Computer ({name}) was created and assigned to technician {technician.name}", 200)
+        technician_names = ', '.join([tech.name for tech in technicians])
+        return (True, f"Computer ({name}) was created and assigned to technicians: {technician_names}", 200)
     
     except Exception as e:
         print(e)
@@ -280,8 +284,34 @@ def retrieve_all_technicians() -> tuple:
         print(e)
         return (False, "An error occurred while retrieving technicians", [], 500)
 
+def assign_technicians_to_computer(computer_name: str, technician_ids: list) -> tuple:
+    """Assign multiple technicians to a computer"""
+    try:
+        computer = session.query(Computers).filter_by(name=computer_name).first()
+        if not computer:
+            return (False, f"Computer '{computer_name}' not found", 404)
+        
+        technicians = session.query(Technicians).filter(Technicians.id.in_(technician_ids)).all()
+        if not technicians:
+            return (False, "No valid technicians found", 404)
+        
+        # Clear existing assignments
+        computer.technicians = []
+
+        # Assign the technicians
+        computer.technicians.extend(technicians)
+        session.commit()
+        
+        technician_names = ', '.join([t.name for t in technicians])
+        return (True, f"Computer '{computer_name}' now assigned to technicians: {technician_names}", 200)
+    
+    except Exception as e:
+        print(e)
+        session.rollback()
+        return (False, "Error assigning technicians to computer", 500)
+
 def assign_technician_to_computer(computer_name: str, technician_id: int) -> tuple:
-    """Assign a technician to a computer"""
+    """Assign a technician to a computer (backward compatibility)"""
     try:
         computer = session.query(Computers).filter_by(name=computer_name).first()
         if not computer:
@@ -332,6 +362,84 @@ def unassign_technician_from_computer(computer_name: str) -> tuple:
         print(e)
         session.rollback()
         return (False, f"Error unassigning technician from computer", 500)
+
+def assign_profile_to_computer(computer_name: str, profile_id: int) -> tuple:
+    """Assign a profile to a computer"""
+    try:
+        computer = session.query(Computers).filter_by(name=computer_name).first()
+        if not computer:
+            return (False, f"Computer '{computer_name}' not found", 404)
+        
+        # Check if profile exists
+        from .profiles import retrieve_all_profiles
+        profile_success, _, profiles, _ = retrieve_all_profiles()
+        if not profile_success:
+            return (False, "Error retrieving profiles", 500)
+        
+        profile = next((p for p in profiles if p.id == profile_id), None)
+        if not profile:
+            return (False, f"Profile with ID {profile_id} not found", 404)
+        
+        # Check if computer already has this profile assigned
+        if computer.profile_id == profile_id: # type: ignore
+            return (False, f"Computer '{computer_name}' already has profile '{profile.name}' assigned", 409)
+        
+        # Store old profile name for confirmation message
+        old_profile_name = computer.profile.name if computer.profile else "No profile"
+        
+        # Assign the profile
+        computer.profile_id = profile_id # type: ignore
+        
+        # Clear completed steps since profile changed
+        computer.setup_steps = [] # type: ignore
+        
+        session.commit()
+        
+        return (True, f"Computer '{computer_name}' profile changed from '{old_profile_name}' to '{profile.name}'. Setup steps have been reset.", 200)
+    
+    except Exception as e:
+        print(e)
+        session.rollback()
+        return (False, f"Error assigning profile to computer", 500)
+
+def delete_computer(computer_name: str) -> tuple:
+    """Delete a computer and all its associated data"""
+    try:
+        computer = session.query(Computers).filter_by(name=computer_name).first()
+        if not computer:
+            return (False, f"Computer '{computer_name}' not found", 404)
+        
+        # Store computer name for confirmation message
+        name = computer.name
+        
+        # Delete the computer (setup steps will be automatically removed due to relationship)
+        session.delete(computer)
+        session.commit()
+        
+        return (True, f"Computer '{name}' has been deleted successfully", 200)
+    
+    except Exception as e:
+        print(e)
+        session.rollback()
+        return (False, f"Error deleting computer '{computer_name}'", 500)
+
+def edit_computer_notes(computer_name: str, notes: str) -> tuple:
+    """Edit computer notes"""
+    try:
+        computer = session.query(Computers).filter_by(name=computer_name).first()
+        if not computer:
+            return (False, f"Computer '{computer_name}' not found", 404)
+        
+        # Update the notes
+        computer.notes = notes  # type: ignore
+        session.commit()
+        
+        return (True, f"Notes updated for computer '{computer_name}'", 200)
+    
+    except Exception as e:
+        print(e)
+        session.rollback()
+        return (False, f"Error updating notes for computer '{computer_name}'", 500)
     
     
     

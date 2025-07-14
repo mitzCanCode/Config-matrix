@@ -1,0 +1,1144 @@
+{% extends "base.html" %}
+
+{% block title %}Setup - {{ computer_name }} - Config Matrix{% endblock %}
+
+{% block content %}
+
+<!-- Modern Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-main">
+        <a href="/dashboard" class="sidebar-item" data-tooltip="Dashboard">
+            <i class="bi bi-house-door"></i>
+            <span class="sidebar-text">Dashboard</span>
+        </a>
+        <a href="/computers" class="sidebar-item" data-tooltip="Computers">
+            <i class="bi bi-pc-display"></i>
+            <span class="sidebar-text">Computers</span>
+        </a>
+        <a href="/profiles" class="sidebar-item" data-tooltip="Profiles">
+            <i class="bi bi-collection"></i>
+            <span class="sidebar-text">Profiles</span>
+        </a>
+    </div>
+    <div class="sidebar-bottom">
+        <a href="/help" class="sidebar-item" data-tooltip="Help">
+            <i class="bi bi-question-circle"></i>
+            <span class="sidebar-text">Help</span>
+        </a>
+        <a href="/logout" class="sidebar-item" data-tooltip="Logout">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="sidebar-text">Logout</span>
+        </a>
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header with back button -->
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div class="d-flex align-items-center">
+                        <a href="/computers" class="btn btn-outline-secondary me-3">
+                            <i class="bi bi-arrow-left"></i> Back to Computers
+                        </a>
+                    </div>
+
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div class="d-flex align-items-center">
+                        <h1 class="mb-0"><span id="computer-name-title">{{ computer_name }}</span></h1>
+                    </div>
+                    <button class="btn btn-outline-danger" onclick="showDeleteConfirmation()">
+                        <i class="bi bi-trash"></i> Delete Computer
+                    </button>
+                </div>
+                
+                <!-- Loading spinner -->
+                <div id="loading-spinner" class="text-center" style="display: block;">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading computer setup information...</p>
+                </div>
+                
+                <!-- Error message container -->
+                <div id="error-container" style="display: none;">
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading">Error</h4>
+                        <p id="error-message"></p>
+                        <hr>
+                        <p class="mb-0">
+                            <a href="/computers" class="btn btn-outline-danger">Return to Computers</a>
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Main content container -->
+                <div id="setup-content" style="display: none;">
+                    <div class="row">
+                        <!-- Setup Steps - Left Side -->
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Setup Steps</h5>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Remaining Steps Section -->
+                                    <div class="mb-4">
+                                        <h6 class="mb-3"><i class="bi bi-circle text-warning me-2"></i> Remaining Steps</h6>
+                                        <div id="remaining-steps" class="list-group">
+                                            <!-- Remaining steps will be populated here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Completed Steps Section -->
+                                    <div>
+                                        <h6 class="mb-3"><i class="bi bi-check-circle text-success me-2"></i> Completed Steps</h6>
+                                        <div id="completed-steps" class="list-group">
+                                            <!-- Completed steps will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Computer Info Sidebar - Right Side -->
+                        <div class="col-md-4">
+                            <div class="card sticky-top" style="top: 20px;">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Computer Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <strong>Computer Name:</strong>
+                                        <div class="d-flex align-items-center">
+                                            <span id="computer-name" class="me-2 flex-grow-1"></span>
+                                            <div class="d-flex flex-column">
+                                                <button id="name-edit-btn" class="btn btn-sm btn-outline-secondary mb-1" style="
+                                                        border-color: var(--accent-purple);
+                                                        color: var(--accent-purple);
+                                                        transition: all 0.3s ease;
+                                                    " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';" onclick="editField('name')">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button id="name-save-btn" class="btn btn-sm btn-success mb-1" onclick="saveField('name')" style="display: none;">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button id="name-cancel-btn" class="btn btn-sm btn-secondary" onclick="cancelField('name')" style="display: none;">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Deadline:</strong>
+                                        <div class="d-flex align-items-center">
+                                            <span id="computer-deadline" class="me-2 flex-grow-1"></span>
+                                            <div class="d-flex flex-column">
+                                                <button id="deadline-edit-btn" class="btn btn-sm btn-outline-secondary mb-1" style="
+                                                        border-color: var(--accent-purple);
+                                                        color: var(--accent-purple);
+                                                        transition: all 0.3s ease;
+                                                    " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';" onclick="editField('deadline')">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button id="deadline-save-btn" class="btn btn-sm btn-success mb-1" onclick="saveField('deadline')" style="display: none;">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button id="deadline-cancel-btn" class="btn btn-sm btn-secondary" onclick="cancelField('deadline')" style="display: none;">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Technician<span id="technician-plural">s</span>:</strong>
+                                        <div class="d-flex align-items-center">
+                                            <span id="computer-technician" class="me-2 flex-grow-1"></span>
+                                            <div class="d-flex flex-column">
+                                                <button id="technician-edit-btn" class="btn btn-sm btn-outline-secondary mb-1" style="
+                                                        border-color: var(--accent-purple);
+                                                        color: var(--accent-purple);
+                                                        transition: all 0.3s ease;
+                                                    " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';" onclick="editField('technician')">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button id="technician-save-btn" class="btn btn-sm btn-success mb-1" onclick="saveField('technician')" style="display: none;">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button id="technician-cancel-btn" class="btn btn-sm btn-secondary" onclick="cancelField('technician')" style="display: none;">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Profile:</strong>
+                                        <div class="d-flex align-items-center">
+                                            <span id="computer-profile" class="me-2 flex-grow-1"></span>
+                                            <div class="d-flex flex-column">
+                                                <button id="profile-edit-btn" class="btn btn-sm btn-outline-secondary mb-1" style="
+                                                        border-color: var(--accent-purple);
+                                                        color: var(--accent-purple);
+                                                        transition: all 0.3s ease;
+                                                    " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';" onclick="editField('profile')">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button id="profile-save-btn" class="btn btn-sm btn-success mb-1" onclick="saveField('profile')" style="display: none;">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button id="profile-cancel-btn" class="btn btn-sm btn-secondary" onclick="cancelField('profile')" style="display: none;">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Notes Section -->
+                                    <div class="mb-3">
+                                        <strong>Notes:</strong>
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-grow-1 me-2">
+                                                <p id="computer-notes-display" style= "min-height: 20px;">
+                                                    <span id="computer-notes"></span>
+                                                    <span id="notes-placeholder" class="text-muted" style="font-style: italic;">No notes added yet</span>
+                                                </p>
+                                                <textarea id="computer-notes-input" class="form-control" rows="4" placeholder="Enter notes for this computer..." style="
+                                                    display: none;
+                                                    resize: vertical;
+                                                "></textarea>
+                                            </div>
+                                            <div class="d-flex flex-column">
+                                                <button id="notes-edit-btn" class="btn btn-sm btn-outline-secondary mb-1" onclick="editField('notes')" style="
+                                                    border-color: var(--accent-purple);
+                                                    color: var(--accent-purple);
+                                                    transition: all 0.3s ease;
+                                                " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button id="notes-save-btn" class="btn btn-sm btn-success mb-1" onclick="saveField('notes')" style="display: none;">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button id="notes-cancel-btn" class="btn btn-sm btn-secondary" onclick="cancelField('notes')" style="display: none;">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Progress Section -->
+                                    <div class="progress-section mt-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="progress-label"><strong>Setup Progress</strong></span>
+                                            <span id="progress-text" class="progress-percentage"></span>
+                                        </div>
+                                        <div class="custom-progress-bar">
+                                            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Change Confirmation Modal -->
+<div class="modal fade" id="profileChangeModal" tabindex="-1" aria-labelledby="profileChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profileChangeModalLabel">Confirm Profile Change</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h6 class="mb-1">Are you sure you want to change the profile?</h6>
+                        <p class="mb-0 text-muted">This action cannot be undone.</p>
+                    </div>
+                </div>
+                <div class="alert alert-warning" role="alert">
+                    <strong>Warning:</strong> Changing the profile will <strong>reset ALL setup progress</strong> for this computer. All completed steps will be marked as incomplete.
+                </div>
+                <p class="mb-0">
+                    <strong>New Profile:</strong> <span id="newProfileName"></span>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmProfileChange">Change Profile</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Computer Confirmation Modal -->
+<div class="modal fade" id="deleteComputerModal" tabindex="-1" aria-labelledby="deleteComputerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteComputerModalLabel">Delete Computer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-danger me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h6 class="mb-1">Are you sure you want to delete this computer?</h6>
+                        <p class="mb-0 text-muted">This action cannot be undone.</p>
+                    </div>
+                </div>
+                <div class="alert alert-danger" role="alert">
+                    <strong>Warning:</strong> This will permanently delete the computer and all its setup progress. You will not be able to recover this data.
+                </div>
+                <p class="mb-0">
+                    <strong>Computer:</strong> <span id="deleteComputerName"></span>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteComputer">Delete Computer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const computerName = "{{ computer_name }}";
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const errorContainer = document.getElementById('error-container');
+    const errorMessage = document.getElementById('error-message');
+    const setupContent = document.getElementById('setup-content');
+    
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'position-fixed top-0 end-0 p-3 toast-container';
+            toastContainer.style.zIndex = '9999';
+            toastContainer.style.pointerEvents = 'none';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toastId = 'toast-' + Date.now();
+        const alertClass = type === 'error' ? 'danger' : 'success';
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `alert alert-${alertClass} alert-dismissible fade show`;
+        toast.setAttribute('role', 'alert');
+        toast.style.pointerEvents = 'auto';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Add toast to container
+        toastContainer.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (document.getElementById(toastId)) {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 150);
+            }
+        }, 5000);
+    }
+    
+    // Format deadline display
+    function formatDeadline(deadlineStr) {
+        if (!deadlineStr || deadlineStr === 'Not set') {
+            return { text: 'Not set', class: '', style: '' };
+        }
+
+        const now = new Date();
+        const deadline = new Date(deadlineStr);
+        const timeDiff = deadline - now;
+        const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+        // Format deadline as dd/mm/yy at hh:mm
+        const day = String(deadline.getDate()).padStart(2, '0');
+        const month = String(deadline.getMonth() + 1).padStart(2, '0');
+        const year = String(deadline.getFullYear()).slice(-2);
+        const hours = String(deadline.getHours()).padStart(2, '0');
+        const minutes = String(deadline.getMinutes()).padStart(2, '0');
+        const formattedDate = `${day}/${month}/${year} at ${hours}:${minutes}`;
+
+        let text = formattedDate;
+        let colorClass = '';
+        let style = '';
+
+        if (timeDiff < 0) {
+            // Overdue
+            text = `${formattedDate} (overdue)`;
+            colorClass = 'text-danger';
+            style = 'color: #dc3545; font-weight: bold;';
+        } else if (daysDiff === 0) {
+            // Same day
+            colorClass = 'text-danger';
+            style = 'color: #dc3545; font-weight: bold;';
+        } else if (daysDiff < 7) {
+            // Less than a week
+            colorClass = 'text-warning';
+            style = 'color: #fd7e14; font-weight: bold;';
+        } else {
+            // More than a week
+            colorClass = 'text-success';
+            style = 'color: #198754; font-weight: bold;';
+        }
+
+        return { text, class: colorClass, style };
+    }
+    
+    // Toggle step completion
+    function toggleStep(stepName, currentStatus) {
+        const action = currentStatus ? 'incomplete' : 'complete';
+        
+        fetch('/api/toggle_step', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                computer_name: computerName,
+                step_name: stepName,
+                action: action
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                // Reload the setup data
+                loadSetupData();
+            } else {
+                showToast('Error: ' + (data.message || 'Failed to update step'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error: Failed to update step', 'error');
+        });
+    }
+    
+    // Create step element
+    function createStepElement(step, isCompleted) {
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'list-group-item d-flex justify-content-between align-items-center rounded mb-3 shadow-sm';
+        
+        // Apply theme styling - different colors for completed vs remaining steps
+        if (isCompleted) {
+            stepDiv.style.cssText = `
+                background: #07513995;
+                border: 1px solid #28a745;
+                transition: all 0.3s ease;
+            `;
+        } else {
+            stepDiv.style.cssText = `
+                background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+                border: 1px solid var(--border-color);
+                transition: all 0.3s ease;
+            `;
+        }
+        
+        // Add hover effects
+        stepDiv.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        });
+        
+        stepDiv.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+        });
+        
+        const buttonClass = isCompleted ? 'btn-outline-danger' : 'btn-outline-success';
+        const buttonText = isCompleted ? 'Mark Incomplete' : 'Mark Complete';
+        const buttonIcon = isCompleted ? 'bi-x-circle' : 'bi-check-circle';
+        
+        stepDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1" style="color: var(--text-primary);">
+                        ${step.name}
+                    </h6>
+                    <p class="mb-0" style="color: var(--text-secondary); font-size: 0.9rem;">
+                        ${step.download_link ? 
+                            `<i class="bi bi-link-45deg me-1"></i><a href="${step.download_link}" target="_blank" class="text-decoration-none" style="color: var(--accent-purple);">${step.download_link}</a>` : 
+                            '<i class="bi bi-info-circle me-1"></i>No link provided'
+                        }
+                    </p>
+                </div>
+            </div>
+            <button class="btn ${buttonClass} btn-sm" onclick="toggleStep('${step.name}', ${isCompleted})" style="
+                border-color: ${isCompleted ? '#dc3545' : '#10b981'};
+                color: ${isCompleted ? '#dc3545' : '#10b981'};
+                transition: all 0.3s ease;
+            " onmouseover="this.style.backgroundColor='${isCompleted ? '#dc3545' : '#10b981'}'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='${isCompleted ? '#dc3545' : '#10b981'}';"
+            >
+                <i class="bi ${buttonIcon}"></i> ${buttonText}
+            </button>
+        `;
+        
+        return stepDiv;
+    }
+    
+    // Toggle technician selection in setup page
+    function toggleTechnicianSelectionSetup(cardElement) {
+        const technicianId = parseInt(cardElement.dataset.technicianId);
+        const isSelected = cardElement.classList.contains('selected');
+        
+        if (isSelected) {
+            // Deselect technician
+            cardElement.classList.remove('selected');
+        } else {
+            // Select technician
+            cardElement.classList.add('selected');
+        }
+    }
+    
+    // Get selected technician IDs from the container
+    function getSelectedTechnicianIds() {
+        const selectedCards = document.querySelectorAll('.technician-card.selected');
+        return Array.from(selectedCards).map(card => parseInt(card.dataset.technicianId));
+    }
+    
+    // Update technician display after successful save
+    function updateTechnicianDisplay(technicianIds) {
+        const technicianElement = document.getElementById('computer-technician');
+        const pluralElement = document.getElementById('technician-plural');
+        const editBtn = document.getElementById('technician-edit-btn');
+        const saveBtn = document.getElementById('technician-save-btn');
+        const cancelBtn = document.getElementById('technician-cancel-btn');
+        
+        // Update originalValues
+        originalValues.technician_ids = technicianIds;
+        
+        // Find technician names
+        const assignedTechnicians = technicians.filter(t => technicianIds.includes(t.id));
+        
+        if (assignedTechnicians.length > 0) {
+            const technicianNames = assignedTechnicians.map(t => t.name).join(', ');
+            technicianElement.textContent = technicianNames;
+            pluralElement.style.display = assignedTechnicians.length > 1 ? 'inline' : 'none';
+        } else {
+            technicianElement.textContent = 'Unassigned';
+            pluralElement.style.display = 'none';
+        }
+        
+        // Reset button states
+        if (editBtn) editBtn.style.display = 'block';
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        
+        // Clear edit input
+        window.currentEditInput = null;
+    }
+    
+    // Load setup data
+    function loadSetupData() {
+        loadingSpinner.style.display = 'block';
+        errorContainer.style.display = 'none';
+        setupContent.style.display = 'none';
+        
+        fetch(`/api/computer_setup/${encodeURIComponent(computerName)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.Error) {
+                    throw new Error(data.Error);
+                }
+                
+                // Store original values for editing
+                originalValues = {
+                    name: data.name,
+                    deadline: data.deadline,
+                    deadline_iso: data.deadline,
+                    technician_id: data.technician ? data.technician.id : null,
+                    technician_ids: data.technicians ? data.technicians.map(t => t.id) : [],
+                    profile_id: data.profile ? data.profile.id : null,
+                    notes: data.notes || ''
+                };
+                
+                // Populate computer info
+                document.getElementById('computer-name').textContent = data.name;
+                
+                // Handle technician display (multiple technicians)
+                const technicianElement = document.getElementById('computer-technician');
+                const pluralElement = document.getElementById('technician-plural');
+                
+                if (data.technicians && data.technicians.length > 0) {
+                    const technicianNames = data.technicians.map(tech => tech.name).join(', ');
+                    technicianElement.textContent = technicianNames;
+                    pluralElement.style.display = data.technicians.length > 1 ? 'inline' : 'none';
+                } else {
+                    technicianElement.textContent = 'Unassigned';
+                    pluralElement.style.display = 'none';
+                }
+                
+                document.getElementById('computer-profile').textContent = 
+                    data.profile ? data.profile.name : 'No profile';
+                
+                // Format and display deadline
+                const deadlineInfo = formatDeadline(data.deadline);
+                const deadlineElement = document.getElementById('computer-deadline');
+                deadlineElement.innerHTML = `<span class="${deadlineInfo.class}" style="${deadlineInfo.style}">${deadlineInfo.text}</span>`;
+                
+                // Update notes display
+                const notesElement = document.getElementById('computer-notes');
+                const notesPlaceholder = document.getElementById('notes-placeholder');
+                
+                if (data.notes && data.notes.trim()) {
+                    notesElement.textContent = data.notes;
+                    notesPlaceholder.style.display = 'none';
+                } else {
+                    notesElement.textContent = '';
+                    notesPlaceholder.style.display = 'inline';
+                }
+                
+                // Update progress
+                const completed = parseInt(data.completed_steps_num) || 0;
+                const total = parseInt(data.total_step_num) || 0;
+                const progressPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+                
+                document.getElementById('progress-text').textContent = `${completed}/${total} completed (${progressPercentage}%)`;
+                document.getElementById('progress-fill').style.width = `${progressPercentage}%`;
+                
+                // Populate completed steps
+                const completedContainer = document.getElementById('completed-steps');
+                completedContainer.innerHTML = '';
+                if (data.detailed_completed_steps && data.detailed_completed_steps.length > 0) {
+                    data.detailed_completed_steps.forEach(step => {
+                        completedContainer.appendChild(createStepElement(step, true));
+                    });
+                } else {
+                    completedContainer.innerHTML = '<div class="text-muted text-center p-4 rounded" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">No completed steps yet.</div>';
+                }
+                
+                // Populate remaining steps
+                const remainingContainer = document.getElementById('remaining-steps');
+                remainingContainer.innerHTML = '';
+                if (data.detailed_remaining_steps && data.detailed_remaining_steps.length > 0) {
+                    data.detailed_remaining_steps.forEach(step => {
+                        remainingContainer.appendChild(createStepElement(step, false));
+                    });
+                } else {
+                    remainingContainer.innerHTML = '<div class="text-success text-center p-4 rounded" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">All steps completed! 🎉</div>';
+                }
+                
+                // Show content
+                loadingSpinner.style.display = 'none';
+                setupContent.style.display = 'block';
+                
+                // Reset all button states to edit mode
+                resetAllButtonStates();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorMessage.textContent = error.message || 'Failed to load computer setup information.';
+                loadingSpinner.style.display = 'none';
+                errorContainer.style.display = 'block';
+            });
+    }
+    
+    // Global variables to store original values and technicians list
+    let originalValues = {};
+    let technicians = [];
+    let profiles = [];
+    
+    // Load technicians list
+    function loadTechnicians() {
+        return fetch('/api/technicians')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Technicians API response:', data);
+                // The API returns the technicians directly as an array
+                technicians = data || [];
+                return technicians;
+            })
+            .catch(error => {
+                console.error('Error loading technicians:', error);
+                return [];
+            });
+    }
+    
+    // Load profiles list
+    function loadProfiles() {
+        return fetch('/api/profiles')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Profiles API response:', data);
+                // The API returns the profiles directly as an array
+                profiles = data || [];
+                return profiles;
+            })
+            .catch(error => {
+                console.error('Error loading profiles:', error);
+                return [];
+            });
+    }
+    
+    // Edit field inline
+    function editField(field) {
+        const element = document.getElementById(`computer-${field}`);
+        const originalValue = originalValues[field];
+        const currentDisplayValue = element.textContent.trim();
+        
+        // Get buttons
+        const editBtn = document.getElementById(`${field}-edit-btn`);
+        const saveBtn = document.getElementById(`${field}-save-btn`);
+        const cancelBtn = document.getElementById(`${field}-cancel-btn`);
+        
+        if (field === 'name') {
+            // Simple text input for name
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control form-control-sm';
+            input.value = originalValue;
+            input.style.fontSize = 'inherit';
+            
+            element.innerHTML = '';
+            element.appendChild(input);
+            input.focus();
+            input.select();
+            
+            // Store input element for saveField function
+            window.currentEditInput = input;
+            
+        } else if (field === 'deadline') {
+            // Datetime input for deadline
+            const input = document.createElement('input');
+            input.type = 'datetime-local';
+            input.className = 'form-control form-control-sm';
+            
+            // Convert deadline to datetime-local format (YYYY-MM-DDTHH:MM)
+            if (originalValues.deadline_iso) {
+                const date = new Date(originalValues.deadline_iso);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                input.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+            
+            element.innerHTML = '';
+            element.appendChild(input);
+            input.focus();
+            
+            // Store input element for saveField function
+            window.currentEditInput = input;
+            
+        } else if (field === 'technician') {
+            // Create technician selection container
+            const container = document.createElement('div');
+            container.className = 'technician-selection-container';
+            container.style.cssText = `
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                padding: 12px;
+                min-height: 100px;
+                background-color: var(--bg-tertiary);
+                max-height: 200px;
+                overflow-y: auto;
+            `;
+            
+            // Add technician cards
+            technicians.forEach(tech => {
+                const technicianCard = document.createElement('div');
+                technicianCard.className = 'technician-card';
+                technicianCard.textContent = tech.name;
+                technicianCard.dataset.technicianId = tech.id;
+                technicianCard.dataset.technicianName = tech.name;
+                
+                // Set selected state if technician is already assigned
+                if (originalValues.technician_ids.includes(tech.id)) {
+                    technicianCard.classList.add('selected');
+                }
+                
+                // Add click event listener
+                technicianCard.addEventListener('click', function() {
+                    toggleTechnicianSelectionSetup(this);
+                });
+                
+                container.appendChild(technicianCard);
+            });
+            
+            element.innerHTML = '';
+            element.appendChild(container);
+            
+            // Store container element for saveField function
+            window.currentEditInput = container;
+            
+        } else if (field === 'profile') {
+            // Dropdown for profile
+            const select = document.createElement('select');
+            select.className = 'form-select form-select-sm';
+            
+            // Add options
+            profiles.forEach(profile => {
+                const option = document.createElement('option');
+                option.value = profile.id;
+                option.textContent = profile.name;
+                if (profile.id === originalValues.profile_id) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            element.innerHTML = '';
+            element.appendChild(select);
+            select.focus();
+            
+            // Store input element for saveField function
+            window.currentEditInput = select;
+            
+        } else if (field === 'notes') {
+            // Show textarea for notes editing
+            const display = document.getElementById('computer-notes-display');
+            const textarea = document.getElementById('computer-notes-input');
+            
+            // Set the textarea value to the current notes
+            textarea.value = originalValues.notes || '';
+            
+            // Hide display and edit button, show textarea and action buttons
+            display.style.display = 'none';
+            textarea.style.display = 'block';
+            
+            // Focus on textarea
+            textarea.focus();
+            
+            // Store original display state
+            originalValues.notesEditMode = true;
+        }
+        
+        // Show/hide buttons for all fields
+        if (editBtn) editBtn.style.display = 'none';
+        if (saveBtn) saveBtn.style.display = 'block';
+        if (cancelBtn) cancelBtn.style.display = 'block';
+    }
+    
+    // Save field function for all fields
+    function saveField(field) {
+        if (field === 'notes') {
+            const textarea = document.getElementById('computer-notes-input');
+            const newValue = textarea.value;
+            
+            // Call the API to save the notes
+            saveFieldEdit(field, newValue);
+        } else if (field === 'name') {
+            const input = window.currentEditInput;
+            if (input) {
+                const newValue = input.value.trim();
+                if (newValue && newValue !== originalValues[field]) {
+                    saveFieldEdit(field, newValue);
+                } else {
+                    cancelField(field);
+                }
+            }
+        } else if (field === 'deadline') {
+            const input = window.currentEditInput;
+            if (input && input.value) {
+                // Convert to ISO format for API
+                const date = new Date(input.value);
+                const isoString = date.toISOString().slice(0, 19).replace('T', ' ');
+                saveFieldEdit(field, isoString);
+            } else {
+                cancelField(field);
+            }
+        } else if (field === 'technician') {
+            const container = window.currentEditInput;
+            if (container) {
+                const selectedValues = getSelectedTechnicianIds();
+                const originalValuesSorted = [...originalValues.technician_ids].sort().join(',');
+                const newValuesSorted = [...selectedValues].sort().join(',');
+                if (newValuesSorted !== originalValuesSorted) {
+                    saveFieldEdit(field, selectedValues);
+                } else {
+                    cancelField(field);
+                }
+            }
+        } else if (field === 'profile') {
+            const select = window.currentEditInput;
+            if (select) {
+                const newValue = select.value;
+                if (newValue !== String(originalValues.profile_id || '')) {
+                    // Show confirmation modal for profile change
+                    const selectedProfile = profiles.find(p => p.id == newValue);
+                    const profileName = selectedProfile ? selectedProfile.name : 'Unknown';
+                    
+                    // Set the profile name in the modal
+                    document.getElementById('newProfileName').textContent = profileName;
+                    
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('profileChangeModal'));
+                    modal.show();
+                    
+                    // Store the values for the confirmation callback
+                    window.pendingProfileChange = {
+                        field: field,
+                        value: newValue,
+                        originalDisplayValue: document.getElementById(`computer-${field}`).textContent.trim(),
+                        element: document.getElementById(`computer-${field}`)
+                    };
+                } else {
+                    cancelField(field);
+                }
+            }
+        }
+    }
+    
+    // Cancel edit function for all fields
+    function cancelEdit(field) {
+        const element = document.getElementById(`computer-${field}`);
+        const editBtn = document.getElementById(`${field}-edit-btn`);
+        const saveBtn = document.getElementById(`${field}-save-btn`);
+        const cancelBtn = document.getElementById(`${field}-cancel-btn`);
+        
+        if (field === 'notes') {
+            const display = document.getElementById('computer-notes-display');
+            const textarea = document.getElementById('computer-notes-input');
+            const notesElement = document.getElementById('computer-notes');
+            const placeholderDiv = display.querySelector('.text-muted');
+            
+            // Hide textarea and action buttons, show display and edit button
+            display.style.display = 'block';
+            textarea.style.display = 'none';
+            
+            // Reset textarea value
+            textarea.value = originalValues.notes || '';
+            
+            // Reset display
+            if (originalValues.notes && originalValues.notes.trim()) {
+                notesElement.textContent = originalValues.notes;
+                placeholderDiv.style.display = 'none';
+            } else {
+                notesElement.textContent = '';
+                placeholderDiv.style.display = 'block';
+            }
+            
+            // Clear edit mode flag
+            originalValues.notesEditMode = false;
+        } else {
+            // Reset content to original display value based on field type
+            if (field === 'name') {
+                element.textContent = originalValues.name;
+            } else if (field === 'deadline') {
+                // Re-format the deadline for display
+                const deadlineInfo = formatDeadline(originalValues.deadline);
+                element.innerHTML = `<span class="${deadlineInfo.class}" style="${deadlineInfo.style}">${deadlineInfo.text}</span>`;
+            } else if (field === 'technician') {
+                // Find the technician names from the technicians list
+                const assignedTechnicians = technicians.filter(t => originalValues.technician_ids.includes(t.id));
+                const pluralElement = document.getElementById('technician-plural');
+                if (assignedTechnicians.length > 0) {
+                    const technicianNames = assignedTechnicians.map(t => t.name).join(', ');
+                    element.textContent = technicianNames;
+                    pluralElement.style.display = assignedTechnicians.length > 1 ? 'inline' : 'none';
+                } else {
+                    element.textContent = 'Unassigned';
+                    pluralElement.style.display = 'none';
+                }
+            } else if (field === 'profile') {
+                // Find the profile name from the profiles list
+                const profile = profiles.find(p => p.id === originalValues.profile_id);
+                element.textContent = profile ? profile.name : 'No profile';
+            }
+            window.currentEditInput = null;
+        }
+        
+        // Show/hide buttons for all fields
+        if (editBtn) editBtn.style.display = 'block';
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (cancelBtn) cancelBtn.style.display = 'none';
+    }
+    
+    // Alias function for cancelEdit
+    function cancelField(field) {
+        cancelEdit(field);
+    }
+    
+    // Function to reset all button states to edit mode
+    function resetAllButtonStates() {
+        const fields = ['name', 'deadline', 'technician', 'profile', 'notes'];
+        
+        fields.forEach(field => {
+            const editBtn = document.getElementById(`${field}-edit-btn`);
+            const saveBtn = document.getElementById(`${field}-save-btn`);
+            const cancelBtn = document.getElementById(`${field}-cancel-btn`);
+            
+            if (editBtn) editBtn.style.display = 'block';
+            if (saveBtn) saveBtn.style.display = 'none';
+            if (cancelBtn) cancelBtn.style.display = 'none';
+        });
+        
+        // Reset notes display specifically
+        const notesDisplay = document.getElementById('computer-notes-display');
+        const notesTextarea = document.getElementById('computer-notes-input');
+        if (notesDisplay) notesDisplay.style.display = 'block';
+        if (notesTextarea) notesTextarea.style.display = 'none';
+        
+        // Clear any stored edit inputs
+        window.currentEditInput = null;
+        if (originalValues) {
+            originalValues.notesEditMode = false;
+        }
+    }
+    
+    // Save field edit via API
+    function saveFieldEdit(field, value) {
+        const requestData = {
+            current_name: originalValues.name,
+            field: field,
+            value: value
+        };
+        
+        console.log('Sending edit request:', requestData);
+        
+        fetch('/api/edit_computer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                // If name was changed, redirect to the new computer's setup page
+                if (field === 'name') {
+                    showToast('Computer name changed successfully. Redirecting...', 'success');
+                    // Redirect to the new computer's setup page
+                    setTimeout(() => {
+                        window.location.href = `/setup/${encodeURIComponent(value)}`;
+                    }, 1500);
+                } else {
+                    // Reload the setup data
+                    if (field === 'technician') {
+                        updateTechnicianDisplay(value);
+                    } else {
+                        loadSetupData();
+                    }
+                }
+            } else {
+                showToast('Error: ' + (data.message || 'Failed to update field'), 'error');
+                // Reload to revert changes
+                loadSetupData();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error: Failed to update field', 'error');
+            // Reload to revert changes
+            loadSetupData();
+        });
+    }
+    
+    // Modal event handlers
+    document.getElementById('confirmProfileChange').addEventListener('click', function() {
+        if (window.pendingProfileChange) {
+            const { field, value } = window.pendingProfileChange;
+            saveFieldEdit(field, value);
+            
+            // Hide the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('profileChangeModal'));
+            modal.hide();
+            
+            // Clear the pending change
+            window.pendingProfileChange = null;
+        }
+    });
+    
+    // Handle modal cancel/close - revert the field
+    document.getElementById('profileChangeModal').addEventListener('hidden.bs.modal', function() {
+        if (window.pendingProfileChange) {
+            const { field } = window.pendingProfileChange;
+            // Call cancelField to properly reset both display and button states
+            cancelField(field);
+            window.pendingProfileChange = null;
+        }
+    });
+    
+    // Show delete confirmation modal
+    function showDeleteConfirmation() {
+        // Set the computer name in the modal
+        document.getElementById('deleteComputerName').textContent = originalValues.name || computerName;
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteComputerModal'));
+        modal.show();
+    }
+    
+    // Delete computer function
+    function deleteComputer() {
+        const requestData = {
+            computer_name: originalValues.name || computerName
+        };
+        
+        console.log('Deleting computer:', requestData);
+        
+        fetch('/api/delete_computer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                // Redirect to computers page after successful deletion
+                setTimeout(() => {
+                    window.location.href = '/computers';
+                }, 1500);
+            } else {
+                showToast('Error: ' + (data.message || 'Failed to delete computer'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error: Failed to delete computer', 'error');
+        });
+    }
+    
+    // Delete confirmation button handler
+    document.getElementById('confirmDeleteComputer').addEventListener('click', function() {
+        deleteComputer();
+        
+        // Hide the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteComputerModal'));
+        modal.hide();
+    });
+    
+    // Make functions available globally
+    window.toggleStep = toggleStep;
+    window.editField = editField;
+    window.saveField = saveField;
+    window.cancelEdit = cancelEdit;
+    window.cancelField = cancelField;
+    window.resetAllButtonStates = resetAllButtonStates;
+    window.showDeleteConfirmation = showDeleteConfirmation;
+    
+    // Load initial data
+    Promise.all([loadTechnicians(), loadProfiles(), loadSetupData()]);
+});
+</script>
+
+{% endblock %}

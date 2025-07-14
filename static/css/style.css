@@ -44,7 +44,7 @@ html, body {
     background-color: var(--bg-secondary);
     padding: 20px 0;
     border-right: 1px solid var(--border-color);
-    transition: width 0.3s ease;
+    transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
     overflow: hidden;
     z-index: 1000;
     box-shadow: 2px 0 10px var(--shadow-color);
@@ -64,6 +64,7 @@ html, body {
 
 .sidebar:hover {
     width: 250px;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4);
 }
 
 .sidebar-item {
@@ -73,7 +74,9 @@ html, body {
     padding: 15px 20px;
     text-decoration: none;
     margin-bottom: 5px;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                border-left-color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     border-left: 3px solid transparent;
     position: relative;
 }
@@ -89,7 +92,7 @@ html, body {
     width: 30px;
     text-align: center;
     color: var(--accent-purple);
-    transition: color 0.3s ease;
+    transition: color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .sidebar-item:hover i {
@@ -97,10 +100,10 @@ html, body {
 }
 
 .sidebar-text {
-    margin-left: 15px;
+    /* margin-left: 15px; */
     white-space: nowrap;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s;
     font-weight: 500;
 }
 
@@ -111,13 +114,9 @@ html, body {
 /* Main content area adjustment */
 .main-content {
     margin-left: 70px;
-    transition: margin-left 0.3s ease;
     min-height: 100vh;
     background-color: var(--bg-primary);
-}
-
-.sidebar:hover ~ .main-content {
-    margin-left: 250px;
+    padding: 20px;
 }
 
 /* Legacy sidebar support for existing templates */
@@ -191,7 +190,7 @@ select.form-control {
     background-color: var(--bg-tertiary) !important;
     border: 1px solid var(--border-color) !important;
     color: var(--text-primary) !important;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23a6b3cc' viewBox='0 0 16 16'%3e%3cpath d='m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z'/%3e%3c/svg%3e") !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23a6b3cc' viewBox='0 0 16 16'%3e%3cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3e%3c/svg%3e") !important;
     background-repeat: no-repeat !important;
     background-position: right 0.75rem center !important;
     background-size: 16px 12px !important;
@@ -215,6 +214,583 @@ select.form-control option:hover,
 select.form-control option:focus {
     background-color: var(--bg-secondary) !important;
     color: var(--accent-cyan) !important;
+}
+
+select.form-control option:checked {
+    background-color: var(--accent-purple) !important;
+    color: white !important;
+}
+
+/* Multi-select dropdown styling */
+select.form-control[multiple] {
+    background-image: none !important;
+    padding-right: 0.75rem !important;
+    min-height: 120px !important;
+}
+
+select.form-control[multiple] option {
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    margin: 2px !important;
+    cursor: pointer !important;
+}
+
+select.form-control[multiple] option:hover {
+    background-color: var(--accent-purple) !important;
+    color: white !important;
+}
+
+select.form-control[multiple] option:checked {
+    background-color: var(--accent-cyan) !important;
+    color: var(--bg-primary) !important;
+    font-weight: 600 !important;
+}
+
+/* Technician selection cards */
+.technician-card {
+    display: inline-block;
+    padding: 8px 12px;
+    margin: 4px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.technician-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(144, 108, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.technician-card:hover {
+    border-color: var(--accent-purple);
+    background-color: var(--bg-tertiary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.technician-card:hover::before {
+    left: 100%;
+}
+
+.technician-card.selected {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%);
+    border-color: var(--accent-cyan);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(144, 108, 255, 0.4);
+}
+
+.technician-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 2px;
+    right: 6px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.technician-card.selected:hover {
+    background: linear-gradient(135deg, #7c5aff 0%, #4dd0e1 100%);
+    transform: translateY(-2px);
+}
+
+/* Filter technician cards - smaller and more compact */
+.technician-card.filter-card {
+    padding: 6px 10px;
+    margin: 2px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+
+.technician-card.filter-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.technician-card.filter-card.selected {
+    box-shadow: 0 2px 12px rgba(144, 108, 255, 0.3);
+}
+
+.technician-card.filter-card.selected::after {
+    top: 1px;
+    right: 4px;
+    font-size: 0.7rem;
+}
+
+/* Actions Sidebar */
+.actions-sidebar {
+    position: sticky;
+    top: 20px;
+    height: fit-content;
+}
+
+.actions-sidebar .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    transition: all 0.3s ease;
+}
+
+.actions-sidebar .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px var(--shadow-color);
+}
+
+.actions-sidebar .card-header {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%);
+    color: white;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 11px 11px 0 0;
+    padding: 1rem;
+}
+
+.actions-sidebar .card-body {
+    padding: 1.5rem;
+}
+
+.actions-sidebar .btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.actions-sidebar .btn-success:hover {
+    background: linear-gradient(135deg, #218838 0%, #1aa085 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+}
+
+.actions-sidebar .form-control {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.actions-sidebar .form-control:focus {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 0.2rem rgba(144, 108, 255, 0.25);
+}
+
+/* Completion filter styling */
+.completion-filter-container {
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.completion-filter-container .form-check {
+    margin-bottom: 0.5rem;
+}
+
+.completion-filter-container .form-check:last-child {
+    margin-bottom: 0;
+}
+
+.completion-filter-container .form-check-input {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.completion-filter-container .form-check-input:checked {
+    background-color: var(--accent-purple);
+    border-color: var(--accent-purple);
+}
+
+.completion-filter-container .form-check-input:focus {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 0.2rem rgba(144, 108, 255, 0.25);
+}
+
+.completion-filter-container .form-check-label {
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    transition: color 0.3s ease;
+}
+
+.completion-filter-container .form-check-label:hover {
+    color: var(--accent-cyan);
+}
+
+.completion-filter-container .form-check-label i {
+    margin-right: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+    .actions-sidebar {
+        position: static;
+        margin-top: 2rem;
+    }
+    
+    .actions-sidebar .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Bootstrap dropdown styling */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Dropdown button styling */
+.dropdown-toggle {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    font-weight: 500 !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.dropdown-toggle::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: linear-gradient(135deg, transparent 0%, rgba(99, 242, 241, 0.1) 100%) !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.dropdown-toggle:hover {
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%) !important;
+    border-color: var(--accent-cyan) !important;
+    color: var(--accent-cyan) !important;
+    text-decoration: none !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px var(--shadow-color) !important;
+}
+
+.dropdown-toggle:hover::before {
+    opacity: 1 !important;
+}
+
+.dropdown-toggle:focus {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important;
+    border-color: var(--accent-purple) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 0 0 0.2rem rgba(144, 108, 255, 0.25), 0 4px 12px var(--shadow-color) !important;
+    outline: none !important;
+}
+
+.dropdown-toggle.active,
+.dropdown-toggle[aria-expanded="true"] {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%) !important;
+    border-color: var(--accent-purple) !important;
+    color: white !important;
+    box-shadow: 0 4px 20px rgba(144, 108, 255, 0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+.dropdown-toggle.active:hover,
+.dropdown-toggle[aria-expanded="true"]:hover {
+    background: linear-gradient(135deg, #7c5aff 0%, #4dd0e1 100%) !important;
+    border-color: #7c5aff !important;
+    color: white !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Dropdown arrow styling */
+.dropdown-toggle::after {
+    content: "" !important;
+    width: 0 !important;
+    height: 0 !important;
+    border-left: 0.3em solid transparent !important;
+    border-right: 0.3em solid transparent !important;
+    border-top: 0.3em solid currentColor !important;
+    transition: all 0.3s ease !important;
+    margin-left: auto !important;
+}
+
+.dropdown-toggle[aria-expanded="true"]::after {
+    transform: rotate(180deg) !important;
+}
+
+/* Dropdown menu styling */
+.dropdown-menu {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px var(--shadow-color) !important;
+    padding: 0.75rem 0 !important;
+    min-width: 220px !important;
+    margin-top: 0.5rem !important;
+    z-index: 1000 !important;
+    backdrop-filter: blur(10px) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.dropdown-menu::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: linear-gradient(135deg, rgba(144, 108, 255, 0.05) 0%, rgba(99, 242, 241, 0.05) 100%) !important;
+    pointer-events: none !important;
+}
+
+.dropdown-menu.show {
+    display: block !important;
+    animation: dropdownFadeIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-15px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Dropdown item styling */
+.dropdown-item {
+    color: var(--text-primary) !important;
+    padding: 0.75rem 1.25rem !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+    background: none !important;
+    display: block !important;
+    width: 100% !important;
+    text-align: left !important;
+    text-decoration: none !important;
+    font-weight: 400 !important;
+    border-radius: 8px !important;
+    margin: 0.15rem 0.75rem !important;
+    width: calc(100% - 1.5rem) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    z-index: 1 !important;
+}
+
+.dropdown-item::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(99, 242, 241, 0.1), transparent) !important;
+    transition: left 0.5s ease !important;
+    z-index: -1 !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%) !important;
+    color: var(--accent-cyan) !important;
+    text-decoration: none !important;
+    transform: translateX(6px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dropdown-item:hover::before,
+.dropdown-item:focus::before {
+    left: 100% !important;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%) !important;
+    color: white !important;
+    font-weight: 500 !important;
+    box-shadow: 0 4px 20px rgba(144, 108, 255, 0.3) !important;
+    transform: translateX(4px) !important;
+}
+
+.dropdown-item.active::before,
+.dropdown-item:active::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+}
+
+.dropdown-item.active:hover,
+.dropdown-item:active:hover {
+    background: linear-gradient(135deg, #7c5aff 0%, #4dd0e1 100%) !important;
+    color: white !important;
+    transform: translateX(8px) !important;
+    box-shadow: 0 6px 25px rgba(144, 108, 255, 0.4) !important;
+}
+
+.dropdown-item.disabled,
+.dropdown-item:disabled {
+    color: var(--text-muted) !important;
+    background-color: transparent !important;
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+}
+
+.dropdown-item.disabled:hover,
+.dropdown-item:disabled:hover {
+    background-color: transparent !important;
+    color: var(--text-muted) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.dropdown-item.disabled::before,
+.dropdown-item:disabled::before {
+    display: none !important;
+}
+
+/* Dropdown divider styling */
+.dropdown-divider {
+    border-top: 1px solid var(--border-color) !important;
+    margin: 0.5rem 0 !important;
+    opacity: 0.5 !important;
+}
+
+/* Dropdown header styling */
+.dropdown-header {
+    color: var(--text-secondary) !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    padding: 0.75rem 1.25rem 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    background: linear-gradient(135deg, rgba(144, 108, 255, 0.1) 0%, rgba(99, 242, 241, 0.1) 100%) !important;
+    margin: 0.25rem 0.75rem !important;
+    border-radius: 6px !important;
+}
+
+/* Dropdown divider enhanced styling */
+.dropdown-divider {
+    border-top: 1px solid var(--border-color) !important;
+    margin: 0.75rem 1rem !important;
+    opacity: 0.6 !important;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent) !important;
+    height: 1px !important;
+    border: none !important;
+}
+
+/* Dropdown variants */
+.dropdown-toggle.btn-primary {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #7c5aff 100%) !important;
+    border-color: var(--accent-purple) !important;
+    color: white !important;
+}
+
+.dropdown-toggle.btn-primary:hover {
+    background: linear-gradient(135deg, #7c5aff 0%, var(--accent-cyan) 100%) !important;
+    border-color: #7c5aff !important;
+    color: white !important;
+    box-shadow: 0 8px 25px rgba(144, 108, 255, 0.4) !important;
+}
+
+.dropdown-toggle.btn-primary[aria-expanded="true"] {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%) !important;
+    box-shadow: 0 4px 20px rgba(144, 108, 255, 0.5) !important;
+}
+
+.dropdown-toggle.btn-success {
+    background: linear-gradient(135deg, var(--accent-green) 0%, #7ae49b 100%) !important;
+    border-color: var(--accent-green) !important;
+    color: var(--bg-primary) !important;
+    font-weight: 600 !important;
+}
+
+.dropdown-toggle.btn-success:hover {
+    background: linear-gradient(135deg, #7ae49b 0%, var(--accent-cyan) 100%) !important;
+    border-color: #7ae49b !important;
+    color: var(--bg-primary) !important;
+    box-shadow: 0 8px 25px rgba(145, 255, 171, 0.4) !important;
+}
+
+.dropdown-toggle.btn-success[aria-expanded="true"] {
+    background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-cyan) 100%) !important;
+    box-shadow: 0 4px 20px rgba(145, 255, 171, 0.5) !important;
+}
+
+.dropdown-toggle.btn-danger {
+    background: linear-gradient(135deg, var(--accent-pink) 0%, #ff6b6b 100%) !important;
+    border-color: var(--accent-pink) !important;
+    color: white !important;
+}
+
+.dropdown-toggle.btn-danger:hover {
+    background: linear-gradient(135deg, #ff6b6b 0%, var(--accent-purple) 100%) !important;
+    border-color: #ff6b6b !important;
+    color: white !important;
+    box-shadow: 0 8px 25px rgba(255, 128, 128, 0.4) !important;
+}
+
+.dropdown-toggle.btn-danger[aria-expanded="true"] {
+    background: linear-gradient(135deg, var(--accent-pink) 0%, var(--accent-purple) 100%) !important;
+    box-shadow: 0 4px 20px rgba(255, 128, 128, 0.5) !important;
+}
+
+/* Custom select styling for better theme integration */
+.form-select-sm {
+    padding: 0.25rem 1.5rem 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+}
+
+.form-select-lg {
+    padding: 0.5rem 2rem 0.5rem 1rem !important;
+    font-size: 1.25rem !important;
+}
+
+/* Multi-select styling */
+select[multiple].form-control,
+select[multiple].form-select {
+    background-image: none !important;
+    padding-right: 0.75rem !important;
+    height: auto !important;
+    min-height: 120px !important;
+}
+
+select[multiple].form-control option,
+select[multiple].form-select option {
+    padding: 0.5rem !important;
+    margin: 1px 0 !important;
+    border-radius: 4px !important;
+}
+
+select[multiple].form-control option:checked,
+select[multiple].form-select option:checked {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%) !important;
+    color: white !important;
 }
 
 /* Button styling */
@@ -326,15 +902,20 @@ h1, h2, h3, h4, h5, h6 {
 /* Responsive design */
 @media (max-width: 768px) {
     .sidebar {
-        width: 60px;
+        width: 200px;
+        transform: translateX(-140px);
+        transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
+        will-change: transform;
     }
     
     .sidebar:hover {
-        width: 200px;
+        transform: translateX(0);
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4);
     }
     
     .main-content {
         margin-left: 60px;
+        transition: margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
     
     .sidebar:hover ~ .main-content {
@@ -363,7 +944,7 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar-item:not(.active)::after {
     content: attr(data-tooltip);
     position: absolute;
-    left: 70px;
+    left: calc(100% + 10px);
     top: 50%;
     transform: translateY(-50%);
     background-color: var(--bg-tertiary);
@@ -374,7 +955,7 @@ h1, h2, h3, h4, h5, h6 {
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     z-index: 1001;
     box-shadow: 0 2px 8px var(--shadow-color);
 }

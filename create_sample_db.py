@@ -241,6 +241,8 @@ def create_profiles():
 
 def create_computers():
     """Create sample computers with realistic models and assignments"""
+    import random
+    
     # Get technicians and profiles
     technicians = session.query(Technicians).all()
     profiles = session.query(Profiles).all()
@@ -250,17 +252,39 @@ def create_computers():
     computers = []
     
     for i in range(50):
+        # Randomly assign 1-3 technicians to each computer
+        num_technicians = random.randint(1, 3)
+        assigned_technicians = random.sample(technicians, num_technicians)
+        
+        # Add sample notes to some computers
+        sample_notes = [
+            "Special hardware configuration required",
+            "VIP user - priority setup",
+            "External monitor setup needed",
+            "Custom software installation required",
+            "Network configuration issues reported",
+            "User requested specific applications",
+            "Hardware upgrade completed",
+            "Security clearance pending",
+            "Remote work setup required",
+            "Backup and migration in progress"
+        ]
+        
+        # Add notes to about 30% of computers
+        notes = sample_notes[i % len(sample_notes)] if i % 3 == 0 else None
+        
         computer = Computers(
             name=f"Computer {i + 1}",
             deadline=today + timedelta(days=(i % 10 + 1)),
-            technician=technicians[i % len(technicians)],
-            profile=profiles[i % len(profiles)]
+            technicians=assigned_technicians,
+            profile=profiles[i % len(profiles)],
+            notes=notes
         )
         computers.append(computer)
     
     session.add_all(computers)
     session.commit()
-    print(f"Created {len(computers)} computers with realistic models and assignments.")
+    print(f"Created {len(computers)} computers with realistic models and varied technician assignments.")
 
 def mark_some_steps_complete():
     """Mark some steps as complete for realistic progress simulation"""
@@ -283,6 +307,41 @@ def mark_some_steps_complete():
     
     session.commit()
     print("\nMarked various steps as complete to simulate realistic progress for all computers.")
+
+def create_completed_computers():
+    """Create a few computers with 100% completion for testing filters"""
+    import random
+    
+    # Get technicians and profiles
+    technicians = session.query(Technicians).all()
+    profiles = session.query(Profiles).all()
+    
+    # Create 5 fully completed computers
+    today = datetime.now()
+    completed_computers = []
+    
+    for i in range(5):
+        # Assign 1-2 technicians to each completed computer
+        num_technicians = random.randint(1, 2)
+        assigned_technicians = random.sample(technicians, num_technicians)
+        
+        computer = Computers(
+            name=f"Completed Computer {i + 1}",
+            deadline=today - timedelta(days=random.randint(1, 5)),  # Past deadlines (completed)
+            technicians=assigned_technicians,
+            profile=profiles[i % len(profiles)],
+            notes=f"Setup completed successfully on {(today - timedelta(days=random.randint(1, 3))).strftime('%Y-%m-%d')}"
+        )
+        
+        # Mark ALL steps as complete
+        if computer.profile and computer.profile.setup_steps_to_follow:
+            computer.setup_steps.extend(computer.profile.setup_steps_to_follow)
+        
+        completed_computers.append(computer)
+    
+    session.add_all(completed_computers)
+    session.commit()
+    print(f"Created {len(completed_computers)} fully completed computers for testing completion filters.")
 
 def print_database_summary():
     """Print a comprehensive summary of the created database"""
@@ -333,7 +392,14 @@ def print_database_summary():
     computers = session.query(Computers).all()
     print(f"\n💻 COMPUTERS ({len(computers)}):")
     for i, computer in enumerate(computers, 1):
-        tech_name = computer.technician.name if computer.technician else "Unassigned"
+        # Handle multiple technicians
+        if computer.technicians:
+            tech_names = ", ".join([tech.name for tech in computer.technicians])
+            tech_count = len(computer.technicians)
+            tech_display = f"{tech_names} ({tech_count} technicians)"
+        else:
+            tech_display = "Unassigned"
+        
         profile_name = computer.profile.name if computer.profile else "No Profile"
         completed_steps = len(computer.setup_steps)
         total_steps = len(computer.profile.setup_steps_to_follow) if computer.profile else 0
@@ -341,8 +407,11 @@ def print_database_summary():
         progress_percent = f"({completed_steps/total_steps*100:.1f}%)" if total_steps > 0 else "(0%)"
         deadline_str = computer.deadline.strftime("%Y-%m-%d") if computer.deadline else "No deadline"
         print(f"  {i}. {computer.name}")
-        print(f"     └── Technician: {tech_name} | Profile: {profile_name}")
+        print(f"     └── Technicians: {tech_display}")
+        print(f"     └── Profile: {profile_name}")
         print(f"     └── Progress: {progress} {progress_percent} | Deadline: {deadline_str}")
+        if computer.notes:
+            print(f"     └── Notes: {computer.notes}")
     
     print("\n" + "="*80)
     print("🔒 SECURITY NOTE: All passwords are properly hashed with salt")
@@ -361,6 +430,7 @@ if __name__ == "__main__":
     create_profiles()
     create_computers()
     mark_some_steps_complete()
+    create_completed_computers()
     
     print("\nSample database created successfully!")
     print_database_summary()
