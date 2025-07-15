@@ -1,0 +1,33 @@
+Config Matrix
+Copyright 2024 [Your Name]
+
+This product includes software developed by third parties:
+
+Flask (MIT License)
+Copyright 2010 Pallets
+
+SQLAlchemy (MIT License)
+Copyright 2006-2023 SQLAlchemy authors and contributors
+
+Flask-Login (MIT License)
+Copyright 2011 Matthew Frazier
+
+Flask-WTF (BSD 3-Clause License)
+Copyright 2010 WTForms Team
+
+WTForms (BSD 3-Clause License)
+Copyright 2008 WTForms Team
+
+bcrypt (Apache 2.0 License)
+Copyright The Python Cryptographic Authority developers
+
+Bootstrap (MIT License)
+Copyright 2011-2023 The Bootstrap Authors
+
+Bootstrap Icons (MIT License)
+Copyright 2019-2023 The Bootstrap Authors
+
+Werkzeug (Apache 2.0 License)
+Copyright 2007 Pallets
+
+For full license texts, see the licenses/ directory.
