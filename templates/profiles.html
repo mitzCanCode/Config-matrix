@@ -21,10 +21,6 @@
         </a>
     </div>
     <div class="sidebar-bottom">
-        <a href="/help" class="sidebar-item" data-tooltip="Help">
-            <i class="bi bi-question-circle"></i>
-            <span class="sidebar-text">Help</span>
-        </a>
         <a href="/logout" class="sidebar-item" data-tooltip="Logout">
             <i class="bi bi-box-arrow-right"></i>
             <span class="sidebar-text">Logout</span>
@@ -40,9 +36,25 @@
                 <!-- Header -->
                 <div class="d-flex align-items-center justify-content-between mb-4">
                     <h1 class="mb-0">Profiles</h1>
-                    <button class="btn btn-primary" onclick="createNewProfile()">
-                        <i class="bi bi-plus-circle"></i> New Profile
+<button id="add-profile-btn" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Add Profile
                     </button>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="mb-4">
+                    <div class="input-group">
+                        <span class="input-group-text" style="
+                            background-color: var(--bg-tertiary);
+                            border-color: var(--border-color);
+                            color: var(--text-primary);
+                        "><i class="bi bi-search"></i></span>
+                        <input type="text" id="search-profiles" class="form-control" placeholder="Search profiles by name..." style="
+                            background-color: var(--bg-tertiary);
+                            border-color: var(--border-color);
+                            color: var(--text-primary);
+                        ">
+                    </div>
                 </div>
                 
                 <!-- Loading spinner -->
@@ -61,6 +73,7 @@
                     </div>
                 </div>
                 
+
                 <!-- Main content container -->
                 <div id="profiles-content" style="display: none;">
                     <div class="card">
@@ -79,12 +92,148 @@
     </div>
 </div>
 
+<!-- Delete Profile Confirmation Modal -->
+<div class="modal fade" id="deleteProfileModal" tabindex="-1" aria-labelledby="deleteProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteProfileModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>
+                    Delete Profile
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger" role="alert">
+                    <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-1"></i> Warning!</h6>
+                    <p class="mb-2">Deleting this profile will also <strong>permanently delete ALL computers</strong> that are currently using this profile.</p>
+                    <p class="mb-0">This action cannot be undone.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Profile to delete:</strong>
+                    <div class="p-2 bg-light rounded mt-1" style="background-color: var(--bg-tertiary) !important; border: 1px solid var(--border-color);">
+                        <i class="bi bi-collection me-2"></i>
+                        <span id="deleteProfileName"></span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Computers that will be deleted:</strong>
+                    <div id="computersToDelete" class="mt-2">
+                        <!-- Computers list will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmDeleteProfile">
+                    <label class="form-check-label" for="confirmDeleteProfile">
+                        I understand that this will permanently delete the profile and all associated computers
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="executeDeleteProfile" disabled>
+                    <i class="bi bi-trash"></i> Delete Profile
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const loadingSpinner = document.getElementById('loading-spinner');
     const errorContainer = document.getElementById('error-container');
     const errorMessage = document.getElementById('error-message');
     const profilesContent = document.getElementById('profiles-content');
+    const searchInput = document.getElementById('search-profiles');
+    
+    // Store all profiles for filtering
+    let allProfiles = [];
+    
+    // Function to render profiles
+    function renderProfiles(profiles) {
+        const profilesList = document.getElementById('profiles-list');
+        profilesList.innerHTML = '';
+        
+        if (profiles.length === 0) {
+            profilesList.innerHTML = '<div class="text-muted text-center p-4 rounded" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">No profiles to show.</div>';
+        } else {
+            profiles.forEach((profile, index) => {
+                const profileItem = document.createElement('div');
+                profileItem.className = 'list-group-item d-flex justify-content-between align-items-center rounded mb-3 shadow-sm';
+                profileItem.style.cssText = `
+                    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+                    border: 1px solid var(--border-color);
+                    transition: all 0.3s ease;
+                `;
+                
+                // Add hover effects
+                profileItem.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                });
+                
+                profileItem.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+                });
+                
+                profileItem.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="profile-icon me-3" style="
+                            width: 48px;
+                            height: 48px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            border-radius: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                            font-size: 1.2rem;
+                        ">
+                            <i class="bi bi-collection"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1" style="color: var(--text-primary);">${profile.name}</h6>
+                            <p class="mb-0" style="color: var(--text-secondary); font-size: 0.9rem;">
+                                <i class="bi bi-list-task me-1"></i>
+                                ${profile.step_count} setup step${profile.step_count !== 1 ? 's' : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary btn-sm" onclick="editProfile(${profile.id})" style="
+                            border-color: var(--accent-purple);
+                            color: var(--accent-purple);
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteProfile(${profile.id}, '${profile.name}')" style="
+                            border-color: var(--accent-pink);
+                            color: var(--accent-pink);
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.backgroundColor='var(--accent-pink)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-pink)';">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+                profilesList.appendChild(profileItem);
+            });
+        }
+    }
+    
+    // Function to filter profiles
+    function filterProfiles(searchTerm) {
+        const filteredProfiles = allProfiles.filter(profile => 
+            profile.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        renderProfiles(filteredProfiles);
+    }
     
     // Load profiles
     function loadProfiles() {
@@ -99,66 +248,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error(data.Error);
                 }
                 
-                const profilesList = document.getElementById('profiles-list');
-                profilesList.innerHTML = '';
+                // Store all profiles
+                allProfiles = data;
                 
+                // Show "No profiles available" message if no profiles exist
                 if (data.length === 0) {
+                    const profilesList = document.getElementById('profiles-list');
                     profilesList.innerHTML = '<div class="text-muted text-center p-4 rounded" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">No profiles available. Create your first profile to get started.</div>';
                 } else {
-                    data.forEach((profile, index) => {
-                        const profileItem = document.createElement('div');
-                        profileItem.className = 'list-group-item d-flex justify-content-between align-items-center rounded mb-3 shadow-sm';
-                        profileItem.style.cssText = `
-                            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-                            border: 1px solid var(--border-color);
-                            transition: all 0.3s ease;
-                        `;
-                        
-                        // Add hover effects
-                        profileItem.addEventListener('mouseenter', function() {
-                            this.style.transform = 'translateY(-2px)';
-                            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                        });
-                        
-                        profileItem.addEventListener('mouseleave', function() {
-                            this.style.transform = 'translateY(0)';
-                            this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-                        });
-                        
-                        profileItem.innerHTML = `
-                            <div class="d-flex align-items-center">
-                                <div class="profile-icon me-3" style="
-                                    width: 48px;
-                                    height: 48px;
-                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                    border-radius: 12px;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    color: white;
-                                    font-weight: bold;
-                                    font-size: 1.2rem;
-                                ">
-                                    <i class="bi bi-collection"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1" style="color: var(--text-primary);">${profile.name}</h6>
-                                    <p class="mb-0" style="color: var(--text-secondary); font-size: 0.9rem;">
-                                        <i class="bi bi-list-task me-1"></i>
-                                        ${profile.step_count} setup step${profile.step_count !== 1 ? 's' : ''}
-                                    </p>
-                                </div>
-                            </div>
-                            <button class="btn btn-outline-primary btn-sm" onclick="editProfile(${profile.id})" style="
-                                border-color: var(--accent-purple);
-                                color: var(--accent-purple);
-                                transition: all 0.3s ease;
-                            " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';">
-                                <i class="bi bi-pencil"></i> Edit
-                            </button>
-                        `;
-                        profilesList.appendChild(profileItem);
-                    });
+                    // Apply current search filter
+                    const searchTerm = searchInput.value;
+                    filterProfiles(searchTerm);
                 }
                 
                 // Show content
@@ -181,13 +281,209 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create new profile function
     function createNewProfile() {
         // For now, just redirect to a placeholder
-        alert('Profile creation feature coming soon!');
+        const profileName = prompt('Enter profile name:');
+
+        if (!profileName) {
+            alert('Profile name is required!');
+            return;
+        }
+
+        fetch('/api/add_profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: profileName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Profile created successfully!');
+                loadProfiles();
+            } else {
+                alert('Error creating profile: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An unexpected error occurred while creating the profile.');
+        });
+    }
+    
+    // Confirm delete profile function
+    function confirmDeleteProfile(profileId, profileName) {
+        // Set the profile name in the modal
+        document.getElementById('deleteProfileName').textContent = profileName;
+        
+        // Fetch computers using this profile
+        console.log('Fetching computers for profile ID:', profileId);
+        
+        fetch(`/api/profile/${profileId}/computers`)
+            .then(response => {
+                console.log('Computers response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Computers data:', data);
+                
+                const computersContainer = document.getElementById('computersToDelete');
+                computersContainer.innerHTML = '';
+                
+                if (data.computers && data.computers.length > 0) {
+                    // Show computers list
+                    const computersList = document.createElement('div');
+                    computersList.className = 'list-group';
+                    computersList.style.maxHeight = '200px';
+                    computersList.style.overflowY = 'auto';
+                    
+                    data.computers.forEach(computer => {
+                        const computerItem = document.createElement('div');
+                        computerItem.className = 'list-group-item d-flex align-items-center';
+                        computerItem.style.cssText = `
+                            background-color: var(--bg-secondary);
+                            border-color: var(--border-color);
+                            color: var(--text-primary);
+                        `;
+                        computerItem.innerHTML = `
+                            <i class="bi bi-pc-display me-2 text-danger"></i>
+                            <span>${computer.name}</span>
+                        `;
+                        computersList.appendChild(computerItem);
+                    });
+                    
+                    computersContainer.appendChild(computersList);
+                } else {
+                    // No computers using this profile
+                    const noComputersMsg = document.createElement('div');
+                    noComputersMsg.className = 'text-muted text-center p-3';
+                    noComputersMsg.style.cssText = `
+                        background-color: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 8px;
+                    `;
+                    noComputersMsg.innerHTML = `
+                        <i class="bi bi-info-circle me-2"></i>
+                        No computers are currently using this profile.
+                    `;
+                    computersContainer.appendChild(noComputersMsg);
+                }
+                
+                // Store the profile ID for deletion
+                window.currentProfileToDelete = profileId;
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteProfileModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error fetching computers for profile:', error);
+                
+                // Show modal anyway, but with error message for computers
+                const computersContainer = document.getElementById('computersToDelete');
+                computersContainer.innerHTML = '';
+                
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'alert alert-warning';
+                errorMsg.innerHTML = `
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Could not load computers for this profile. The profile will still be deleted.
+                `;
+                computersContainer.appendChild(errorMsg);
+                
+                // Store the profile ID for deletion
+                window.currentProfileToDelete = profileId;
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteProfileModal'));
+                modal.show();
+            });
+    }
+    
+    // Delete profile function
+    function deleteProfile(profileId) {
+        const deleteBtn = document.getElementById('executeDeleteProfile');
+        
+        // Show loading state
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
+        
+        console.log('Attempting to delete profile with ID:', profileId);
+        
+        fetch(`/api/profile/${profileId}/delete`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            console.log('Delete response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Delete response data:', data);
+            
+            if (data.success) {
+                // Hide the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteProfileModal'));
+                modal.hide();
+                
+                // Show success message
+                alert('Profile and associated computers deleted successfully!');
+                
+                // Reload profiles
+                loadProfiles();
+            } else {
+                alert('Error deleting profile: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting profile:', error);
+            alert('Error deleting profile. Please try again.');
+        })
+        .finally(() => {
+            // Reset button state
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = '<i class="bi bi-trash"></i> Delete Profile';
+        });
     }
     
     // Make functions available globally
     window.editProfile = editProfile;
     window.createNewProfile = createNewProfile;
+    window.confirmDeleteProfile = confirmDeleteProfile;
+    window.deleteProfile = deleteProfile;
+
+    // Connect the add profile button
+    document.getElementById('add-profile-btn').addEventListener('click', createNewProfile);
     
+    // Add search input event listener
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value;
+        filterProfiles(searchTerm);
+    });
+    
+    // Modal event listeners
+    document.getElementById('confirmDeleteProfile').addEventListener('change', function() {
+        const executeBtn = document.getElementById('executeDeleteProfile');
+        executeBtn.disabled = !this.checked;
+    });
+    
+    document.getElementById('executeDeleteProfile').addEventListener('click', function() {
+        if (window.currentProfileToDelete) {
+            deleteProfile(window.currentProfileToDelete);
+        }
+    });
+    
+    // Reset modal when it's closed
+    document.getElementById('deleteProfileModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('confirmDeleteProfile').checked = false;
+        document.getElementById('executeDeleteProfile').disabled = true;
+        window.currentProfileToDelete = null;
+    });
+
     // Load initial data
     loadProfiles();
 });

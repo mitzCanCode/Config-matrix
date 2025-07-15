@@ -26,7 +26,7 @@ def create_technicians():
         {"name": "Robert Chen", "email": "robert.chen@company.com", "password": "TechSupport#789"},
         {"name": "Maria Rodriguez", "email": "maria.rodriguez@company.com", "password": "ITAdmin$456"},
         {"name": "James Wilson", "email": "james.wilson@company.com", "password": "ConfigMaster@123"},
-        {"name": "Sarah Kim", "email": "sarah.kim@company.com", "password": "SystemSetup321"},
+        {"name": "Sarah Kim", "email": "sarah.kim@company.com", "password": "SystemSetup@321"},
         {"name": "user", "email": "user@domain.com", "password": "Password123@"},
     ]
 
@@ -405,12 +405,12 @@ def print_database_summary():
         total_steps = len(computer.profile.setup_steps_to_follow) if computer.profile else 0
         progress = f"{completed_steps}/{total_steps}" if total_steps > 0 else "0/0"
         progress_percent = f"({completed_steps/total_steps*100:.1f}%)" if total_steps > 0 else "(0%)"
-        deadline_str = computer.deadline.strftime("%Y-%m-%d") if computer.deadline else "No deadline"
+        deadline_str = computer.deadline.strftime("%Y-%m-%d") if computer.deadline else "No deadline" # type: ignore
         print(f"  {i}. {computer.name}")
         print(f"     └── Technicians: {tech_display}")
         print(f"     └── Profile: {profile_name}")
         print(f"     └── Progress: {progress} {progress_percent} | Deadline: {deadline_str}")
-        if computer.notes:
+        if computer.notes: # type: ignore
             print(f"     └── Notes: {computer.notes}")
     
     print("\n" + "="*80)

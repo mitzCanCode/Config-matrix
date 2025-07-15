@@ -167,6 +167,16 @@ html, body {
     color: var(--text-primary) !important;
 }
 
+/* Search Icon Styling */
+.input-group-text i {
+    color: var(--accent-purple);
+    transition: color 0.3s ease;
+}
+
+.input-group-text:hover i {
+    color: var(--accent-cyan);
+}
+
 /* Form styling */
 .form-control {
     background-color: var(--bg-tertiary) !important;

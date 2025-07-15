@@ -1,251 +1,198 @@
 ### Custom module imports:
-from .db import session, Profiles, SetupSteps, Computers
-from .utils import validate_int
+from .db import get_db_session, Profiles, SetupSteps, Computers
+from .utils import StatusCodes
 from .steps import retrieve_all_steps
 
 def add_step_to_profile(profile_name: str, step_name: str) -> tuple:
-    step = session.query(SetupSteps).filter_by(name=step_name).first()
-    profile = session.query(Profiles).filter_by(name=profile_name).first()
-    if not step:
-        return (False, "Setup step not found", 404)
-    if not profile:
-        return (False, "Profile not found", 404)
-    
-    profile.setup_steps_to_follow.append(step)
-    session.commit()
-    return (True, f"Added {step.name} to profile {profile.name}", 200)
+    with get_db_session() as session:
+        step = session.query(SetupSteps).filter_by(name=step_name).first() # Find step
+        
+        if not step: # Handle step not existing
+            return (False, "Setup step not found", StatusCodes.not_found)
+        
+        profile = session.query(Profiles).filter_by(name=profile_name).first() # Find profile
+        
+        if not profile: # Handle profile not existing
+            return (False, "Profile not found", StatusCodes.not_found)
+        
+        profile.setup_steps_to_follow.append(step) # Add step to profile
+        return (True, f"Added {step.name} to profile {profile.name}", StatusCodes.success)
 
 def create_profile(name: str) -> tuple:
     try:
-        existing = session.query(Profiles).filter_by(name=name).first()
-        if existing:
-            return (False, f"Profile '{name}' already exists", 409)
-        
-        new_profile = Profiles(
-            name = name,
-        )
-        session.add(new_profile)
-        session.commit()
-        return (True, f"Profile '{name}' created successfully", 200)
+        with get_db_session() as session:
+            existing = session.query(Profiles).filter_by(name=name).first()
+            if existing:
+                return (False, f"Profile '{name}' already exists", 409)
+            
+            new_profile = Profiles(
+                name = name,
+            )
+            session.add(new_profile)
+            return (True, f"Profile '{name}' created successfully", StatusCodes.success)
     
     except Exception as e:
         print(e)
-        return (False, f"An error occured trying to create '{name}' profile", 500)
+        return (False, f"An error occured trying to create '{name}' profile", StatusCodes.internal_server_error)
 
 def delete_profile(name: str) -> tuple:
     try:
-        # Fetch the profile
-        profile = session.query(Profiles).filter_by(name=name).first()
-        if not profile:
-            return (False, f"Profile '{name}' not found", 404)
+        with get_db_session() as session:
+            # Fetch the profile
+            profile = session.query(Profiles).filter_by(name=name).first()
+            if not profile:
+                return (False, f"Profile '{name}' not found", StatusCodes.not_found)
 
-        # Delete all computers using this profile
-        session.query(Computers).filter_by(profile_id=profile.id).delete()
+            # Delete all computers using this profile
+            session.query(Computers).filter_by(profile_id=profile.id).delete()
 
-        # Delete the profile itself
-        session.delete(profile)
-        session.commit()
+            # Delete the profile itself
+            session.delete(profile)
 
-        return (True, f"Profile '{name}' and its computers deleted", 200)
+            return (True, f"Profile '{name}' and its computers deleted", StatusCodes.success)
 
     except Exception as e:
         print(e)
-        session.rollback()
-        return (False, f"Error deleting profile '{name}'", 500)
+        return (False, f"Error deleting profile '{name}'", StatusCodes.internal_server_error)
     
 def retrieve_all_profiles() -> tuple:
     try: 
-        # Retrieving all profiles
-        profiles = session.query(Profiles).all()
-        
-        if profiles:
-            return (True, "Profiles retrieved successfully", profiles, 200)
-        else:
-            return (True, "No profiles have been created yet", profiles, 200)
+        with get_db_session() as session:
+            # Retrieving all profiles
+            profiles = session.query(Profiles).all()
+            
+            if profiles:
+                serialized_profiles = [
+                   {
+                       'id': profile.id,
+                       'name': profile.name,
+                   }
+                   for profile in profiles
+                ]
+                return (True, "Profiles retrieved successfully", serialized_profiles, StatusCodes.success)
+            else:
+                return (True, "No profiles have been created yet", [], StatusCodes.success)
     except Exception as e:
-        return (False, "An error occurred while mapping profiles", [], 500)
+        return (False, "An error occurred while mapping profiles", [], StatusCodes.internal_server_error)
 
 def get_profile_steps(profile_name: str) -> tuple:
-    try:
-        profile = session.query(Profiles).filter_by(name=profile_name).first()
-        if not profile:
-            return (False, f"Profile '{profile_name}' not found", [], 404)
-        
-        steps = profile.setup_steps_to_follow
-        return (True, f"Steps for profile '{profile_name}'", steps, 200)
+    try:        
+        with get_db_session() as session:
+            profile = session.query(Profiles).filter_by(name=profile_name).first()
+            if not profile:
+                return (False, f"Profile '{profile_name}' not found", [], StatusCodes.not_found)
+            
+            steps = profile.setup_steps_to_follow
+            serialized_steps = [
+                {
+                    'id': step.id,
+                    'name': step.name,
+                    'download_link': step.download_link or ""
+                }
+                for step in steps
+            ]
+            return (True, f"Steps for profile '{profile_name}'", serialized_steps, StatusCodes.success)
     except Exception as e:
-        return (False, "An error occurred while retrieving profile steps", [], 500)
+        return (False, "An error occurred while retrieving profile steps", [], StatusCodes.internal_server_error)
 
 def remove_step_from_profile(profile_name: str, step_name: str) -> tuple:
     try:
-        step = session.query(SetupSteps).filter_by(name=step_name).first()
-        profile = session.query(Profiles).filter_by(name=profile_name).first()
-        
-        if not step:
-            return (False, "Setup step not found", 404)
-        if not profile:
-            return (False, "Profile not found", 404)
-        
-        # Check if step is actually assigned to the profile
-        if step not in profile.setup_steps_to_follow:
-            return (False, f"Step '{step_name}' is not assigned to profile '{profile_name}'", 404)
-        
-        # Remove the step from the profile
-        profile.setup_steps_to_follow.remove(step)
-        session.commit()
-        
-        return (True, f"Removed {step.name} from profile {profile.name}", 200)
+        with get_db_session() as session:
+            step = session.query(SetupSteps).filter_by(name=step_name).first()
+            profile = session.query(Profiles).filter_by(name=profile_name).first()
+            
+            if not step:
+                return (False, "Setup step not found", StatusCodes.not_found)
+            if not profile:
+                return (False, "Profile not found", StatusCodes.not_found)
+            
+            # Check if step is actually assigned to the profile
+            if step not in profile.setup_steps_to_follow:
+                return (False, f"Step '{step_name}' is not assigned to profile '{profile_name}'", StatusCodes.not_found)
+            
+            # Remove the step from the profile
+            profile.setup_steps_to_follow.remove(step)
+            return (True, f"Removed {step.name} from profile {profile.name}", StatusCodes.success)
+    
     except Exception as e:
         print(e)
-        session.rollback()
-        return (False, f"Error removing step from profile", 500)
+        return (False, f"Error removing step from profile", StatusCodes.internal_server_error)
 
+def get_available_steps_for_profile(profile_id: int) -> tuple:
+    """Get all steps that are not currently assigned to a profile"""
+    try:
+        with get_db_session() as session:
+            profile = session.query(Profiles).filter_by(id=profile_id).first()
+            if not profile:
+                return (False, "Profile not found", [], StatusCodes.not_found)
+            
+            # Get all steps
+            all_steps = session.query(SetupSteps).all()
+            
+            # Get steps already assigned to this profile - access within session
+            assigned_steps = profile.setup_steps_to_follow
+            assigned_step_ids = [step.id for step in assigned_steps]
+            
+            # Filter out already assigned steps and create new list with data
+            available_steps = []
+            for step in all_steps:
+                if step.id not in assigned_step_ids:
+                    # Create a new object with the data we need
+                    available_steps.append({
+                        'id': step.id,
+                        'name': step.name,
+                        'download_link': step.download_link or ""
+                    })
+            
+            return (True, "Available steps retrieved", available_steps, StatusCodes.success)
+    except Exception as e:
+        print(e)
+        return (False, "Error retrieving available steps", [], StatusCodes.internal_server_error)
 
+def remove_step_from_profile_by_id(profile_id: int, step_id: int) -> tuple:
+    """Remove a step from a profile by their IDs"""
+    try:
+        with get_db_session() as session:
+            step = session.query(SetupSteps).filter_by(id=step_id).first()
+            profile = session.query(Profiles).filter_by(id=profile_id).first()
+            
+            if not step:
+                return (False, "Setup step not found", StatusCodes.not_found)
+            if not profile:
+                return (False, "Profile not found", StatusCodes.not_found)
+            
+            # Check if step is actually assigned to the profile
+            if step not in profile.setup_steps_to_follow:
+                return (False, f"Step '{step.name}' is not assigned to this profile", StatusCodes.not_found)
+            
+            # Remove the step from the profile
+            profile.setup_steps_to_follow.remove(step)
+            return (True, f"Removed {step.name} from profile {profile.name}", StatusCodes.success)
+    
+    except Exception as e:
+        print(e)
+        return (False, f"Error removing step from profile", StatusCodes.internal_server_error)
 
-profile_help = """
-\033[94mProfile commands:\033[0m
-  new    - Create a new profile
-  show   - Display all profiles and their assigned steps
-  toggle - Add/remove a setup step to/from a profile
-  delete - Delete a profile entirely
-  exit   - Exit profile management
-"""
-
-
-def profile_prompt() -> None:
-    while True:
-        try:
-            prompt = input("Config Matrix/Profiles ->")
-            prompt = prompt.strip().lower()
-        except KeyboardInterrupt:
-            print("\n\033[36mReturning to main menu...\033[0m")
-            break
-        if prompt == "help":
-            print(profile_help)
-        elif prompt == "new":
-            try:
-                profile_name = input("\tProfile name:").strip()
-            except KeyboardInterrupt:
-                print("\n\t\033[36mProfile creation cancelled.\033[0m")
-                continue
-            status, message, _ = create_profile(name=profile_name)
-            if status:
-                print(f"\t\033[94m{message}\033[0m")
-            else:
-                print(f"\t\033[31m{message}\033[0m")
-        elif prompt == "show":
-            status, message, profiles, _ = retrieve_all_profiles()
-            if not status:
-                print(message) 
-                continue
-            if not profiles:
-                print(message)
-            else:
-                for profile in profiles:
-                    print(f"\t\033[94m{profile.name}\033[0m")
-                    # Show assigned steps for each profile
-                    status, message, steps, _ = get_profile_steps(profile.name)
-                    if steps:
-                        print(f"\t\t\033[36mAssigned steps:\033[0m")
-                        for step in steps:
-                            print(f"\t\t\t\033[37m{step.name}\033[0m")
-                            print(f"\t\t\t\t\033[37m{step.download_link}\033[0m")
-                    else:
-                        print(f"\t\t\033[37mAssigned steps: None\033[0m")
-        elif prompt == "toggle":
-            # Show available profiles
-            status, message, profiles, _ = retrieve_all_profiles()
-            if not status or not profiles:
-                print("\033[31mNo profiles available. Create a profile first.\033[0m")
-                continue
+def add_step_to_profile_by_id(profile_id: int, step_id: int) -> tuple:
+    """Add a step to a profile by their IDs"""
+    try:
+        with get_db_session() as session:
+            step = session.query(SetupSteps).filter_by(id=step_id).first()
+            profile = session.query(Profiles).filter_by(id=profile_id).first()
             
-            print("\033[94mAvailable profiles:\033[0m")
-            for i, profile in enumerate(profiles):
-                print(f"\t\033[36m{i+1}. {profile.name}\033[0m")
+            if not step:
+                return (False, "Setup step not found", StatusCodes.not_found)
+            if not profile:
+                return (False, "Profile not found", StatusCodes.not_found)
             
-            profile_index, cancelled = validate_int("profile number", 1, len(profiles))
-            if cancelled:
-                continue
-            profile_index -= 1
-            selected_profile = profiles[profile_index]
+            # Check if step is already assigned to the profile
+            if step in profile.setup_steps_to_follow:
+                return (False, f"Step '{step.name}' is already assigned to this profile", StatusCodes.conflict)
             
-            status, message, all_steps, _ = retrieve_all_steps()
-            if not status or not all_steps:
-                print("\033[31mNo setup steps available. Create setup steps first.\033[0m")
-                continue
-            
-            # Get steps already assigned to this profile
-            profile_status, profile_message, profile_steps, _ = get_profile_steps(selected_profile.name)
-            profile_step_names = [step.name for step in profile_steps] if profile_status and profile_steps else []
-            ordered_steps = all_steps
-            
-            # Display all steps
-            print("\033[94mAvailable setup steps:\033[0m")
-            for i, step in enumerate(ordered_steps):
-                assigned_str = "(assigned)" if step.name in profile_step_names else ""
-                print(f"\t\033[36m{i+1}. {step.name}\033[0m \033[37m{assigned_str}\033[0m")
-            
-            step_index, cancelled = validate_int("setup step number to toggle", 1, len(ordered_steps))
-            if cancelled:
-                continue
-            step_index -= 1
-            selected_step = ordered_steps[step_index]
-            step_name = selected_step.name
-            
-            # Toggle step in profile
-            if step_name in profile_step_names:
-                status, message, _ = remove_step_from_profile(selected_profile.name, step_name)
-                if status:
-                    print(f"\t\033[94mRemoved {step_name} from {selected_profile.name}.\033[0m")
-                else:
-                    print(f"\t\033[31m{message}\033[0m")
-            else:
-                status, message, _ = add_step_to_profile(selected_profile.name, step_name)
-                if status:
-                    print(f"\t\033[94mAdded {step_name} to {selected_profile.name}.\033[0m")
-                else:
-                    print(f"\t\033[31m{message}\033[0m")
-        elif prompt == "delete":
-            status, message, profiles, _ = retrieve_all_profiles()
-            if not status or not profiles:
-                print("\033[31mNo profiles available to delete.\033[0m")
-                continue
-            
-            print("\033[94mAvailable profiles:\033[0m")
-            for i, profile in enumerate(profiles):
-                print(f"\t\033[36m{i+1}. {profile.name}\033[0m")
-            
-            profile_index, cancelled = validate_int("profile number to delete", 1, len(profiles))
-            if cancelled:
-                continue
-            profile_index -= 1
-            selected_profile = profiles[profile_index]
-            
-            # Confirm deletion
-            try:
-                confirmation = input(f"\tAre you sure you want to delete profile '{selected_profile.name}'? This will also delete all computers using this profile. (y/N): ")
-            except KeyboardInterrupt:
-                print("\n\t\033[36mDeletion cancelled.\033[0m")
-                continue
-            if confirmation.lower() == 'y':
-                status, message, _ = delete_profile(selected_profile.name)
-                if status:
-                    print(f"\t\033[94m{message}\033[0m")
-                else:
-                    print(f"\t\033[31m{message}\033[0m")
-            else:
-                print("\t\033[36mDeletion cancelled.\033[0m")
-        elif prompt == "exit":
-            break
-        else:
-            print("\033[94mUnknown command. Run 'help' for profile instructions.\033[0m")
-
-
-
-if __name__ == "__main__":
-    status, message, error_code = create_profile(name="Developer")
-    print(status, message, error_code)
-    status, message, error_code = create_profile(name="Producer")
-    print(status, message, error_code)
-    status, message, error_code = add_step_to_profile(profile_name="Producer", step_name="Change computer font")
-    print(status, message, error_code)
+            # Add the step to the profile
+            profile.setup_steps_to_follow.append(step)
+            return (True, f"Added {step.name} to profile {profile.name}", StatusCodes.success)
+    
+    except Exception as e:
+        print(e)
+        return (False, f"Error adding step to profile", StatusCodes.internal_server_error)

@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Table
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from contextlib import contextmanager
 
 # Define the database URL (SQLite database stored in a file)
 DATABASE_URL = "sqlite:///computers.db"
@@ -104,3 +105,17 @@ Base.metadata.create_all(engine)
 # Set up session to interact with the DB
 Session = sessionmaker(bind=engine)
 session = Session()
+
+# Context manager for proper session handling
+@contextmanager
+def get_db_session():
+    """Context manager for database sessions with proper cleanup"""
+    db_session = Session()
+    try:
+        yield db_session
+        db_session.commit()
+    except Exception:
+        db_session.rollback()
+        raise
+    finally:
+        db_session.close()

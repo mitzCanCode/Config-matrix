@@ -1,0 +1,672 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Profile - Config Matrix{% endblock %}
+
+{% block content %}
+
+<!-- Modern Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-main">
+        <a href="/dashboard" class="sidebar-item" data-tooltip="Dashboard">
+            <i class="bi bi-house-door"></i>
+            <span class="sidebar-text">Dashboard</span>
+        </a>
+        <a href="/computers" class="sidebar-item" data-tooltip="Computers">
+            <i class="bi bi-pc-display"></i>
+            <span class="sidebar-text">Computers</span>
+        </a>
+        <a href="/profiles" class="sidebar-item active" data-tooltip="Profiles">
+            <i class="bi bi-collection"></i>
+            <span class="sidebar-text">Profiles</span>
+        </a>
+    </div>
+    <div class="sidebar-bottom">
+        <a href="/logout" class="sidebar-item" data-tooltip="Logout">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="sidebar-text">Logout</span>
+        </a>
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div class="d-flex align-items-center">
+                        <a href="/profiles" class="btn btn-outline-secondary me-3">
+                            <i class="bi bi-arrow-left"></i> Back to Profiles
+                        </a>
+                        <h1 class="mb-0">Edit Profile: <span id="profile-name">Loading...</span></h1>
+                    </div>
+                    <button id="save-profile-btn" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Save Changes
+                    </button>
+                </div>
+                
+                <!-- Loading spinner -->
+                <div id="loading-spinner" class="text-center" style="display: block;">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading profile details...</p>
+                </div>
+                
+                <!-- Error message container -->
+                <div id="error-container" style="display: none;">
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading">Error</h4>
+                        <p id="error-message"></p>
+                    </div>
+                </div>
+
+                <!-- Main content container -->
+                <div id="profile-content" style="display: none;">
+                    <!-- Current Steps Section -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Current Steps in Profile</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="profile-steps" class="row">
+                                <!-- Profile steps will be dynamically populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Available Steps Section -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Available Steps to Add</h5>
+                            <button id="create-step-btn" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-circle"></i> Create New Step
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="available-steps" class="row">
+                                <!-- Available steps will be dynamically populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Step Modal -->
+<div class="modal fade" id="createStepModal" tabindex="-1" aria-labelledby="createStepModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createStepModalLabel">
+                    <i class="bi bi-plus-circle-fill"></i> Create New Step
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createStepForm">
+                    <div class="mb-3">
+                        <label for="stepName" class="form-label">Step Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="stepName" name="stepName" required 
+                               placeholder="Enter step name (e.g., 'Install Chrome', 'Configure Network')">
+                        <div class="invalid-feedback" id="stepNameError"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stepLink" class="form-label">Download Link <span class="text-muted">(Optional)</span></label>
+                        <input type="url" class="form-control" id="stepLink" name="stepLink" 
+                               placeholder="https://example.com/download">
+                        <div class="form-text">Provide a download link if this step involves downloading software or files.</div>
+                        <div class="invalid-feedback" id="stepLinkError"></div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="addToProfile" checked>
+                        <label class="form-check-label" for="addToProfile">
+                            Add to current profile immediately
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="createStepSubmit">
+                    <i class="bi bi-check-circle"></i> Create Step
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const profileId = {{ profile_id }};
+    const profileNameElement = document.getElementById('profile-name');
+    const profileStepsContainer = document.getElementById('profile-steps');
+    const availableStepsContainer = document.getElementById('available-steps');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const errorContainer = document.getElementById('error-container');
+    const errorMessage = document.getElementById('error-message');
+    const profileContent = document.getElementById('profile-content');
+    const saveButton = document.getElementById('save-profile-btn');
+    
+    let currentProfileData = null;
+    let hasChanges = false;
+    
+    function showError(message) {
+        errorMessage.textContent = message;
+        loadingSpinner.style.display = 'none';
+        profileContent.style.display = 'none';
+        errorContainer.style.display = 'block';
+    }
+    
+    function showContent() {
+        loadingSpinner.style.display = 'none';
+        errorContainer.style.display = 'none';
+        profileContent.style.display = 'block';
+    }
+    
+    function markChanges() {
+        hasChanges = true;
+        saveButton.disabled = false;
+        saveButton.classList.remove('btn-success');
+        saveButton.classList.add('btn-warning');
+        saveButton.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Save Changes';
+    }
+    
+    function clearChanges() {
+        hasChanges = false;
+        saveButton.disabled = true;
+        saveButton.classList.remove('btn-warning');
+        saveButton.classList.add('btn-success');
+        saveButton.innerHTML = '<i class="bi bi-check-circle"></i> Saved';
+    }
+
+    function fetchProfileDetails() {
+        loadingSpinner.style.display = 'block';
+        errorContainer.style.display = 'none';
+        profileContent.style.display = 'none';
+        
+        fetch(`/api/profile/${profileId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch profile details');
+                }
+                return response.json();
+            })
+            .then(data => {
+                currentProfileData = data;
+                profileNameElement.textContent = data.name;
+                
+                // Populate current profile steps
+                profileStepsContainer.innerHTML = '';
+                if (data.steps && data.steps.length > 0) {
+                    data.steps.forEach(step => {
+                        const stepCard = createStepCard(step, true);
+                        profileStepsContainer.appendChild(stepCard);
+                    });
+                } else {
+                    profileStepsContainer.innerHTML = '<div class="col-12"><p class="text-muted text-center">No steps in this profile yet. Add some from the available steps below.</p></div>';
+                }
+
+                // Populate available steps for suggestions
+                availableStepsContainer.innerHTML = '';
+                if (data.available_steps && data.available_steps.length > 0) {
+                    data.available_steps.forEach(step => {
+                        const stepCard = createStepCard(step, false);
+                        availableStepsContainer.appendChild(stepCard);
+                    });
+                } else {
+                    availableStepsContainer.innerHTML = '<div class="col-12"><p class="text-muted text-center">All available steps have been added to this profile.</p></div>';
+                }
+                
+                clearChanges();
+                showContent();
+            })
+            .catch(error => {
+                console.error('Error fetching profile details:', error);
+                showError('Failed to load profile details. Please try again.');
+            });
+    }
+    
+    function createStepCard(step, isInProfile) {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4 mb-3';
+        
+        const card = document.createElement('div');
+        card.className = 'card h-100';
+        card.style.cssText = `
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        `;
+        
+        // Add hover effects
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+        });
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body d-flex flex-column';
+        
+        if (isInProfile) {
+            cardBody.innerHTML = `
+                <div class="d-flex align-items-center mb-3">
+                    <div class="step-icon me-3" style="
+                        width: 32px;
+                        height: 32px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: 0.9rem;
+                    ">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="card-title mb-1" style="color: var(--text-primary);">
+                            <input type="text" class="form-control form-control-sm step-name-input" 
+                                   value="${step.name}" data-step-id="${step.id}" 
+                                   data-original-name="${step.name}" readonly>
+                        </h6>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Download Link:</label>
+                    <input type="url" class="form-control form-control-sm step-link-input" 
+                           value="${step.download_link || ''}" data-step-id="${step.id}" 
+                           data-original-link="${step.download_link || ''}" readonly>
+                </div>
+                <div class="mt-auto">
+                    <button class="btn btn-sm btn-outline-primary me-2 edit-step-btn" 
+                            onclick="toggleEditStep(${step.id})">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" 
+                            onclick="removeStepFromProfile(${profileId}, ${step.id})">
+                        <i class="bi bi-trash"></i> Remove
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger ms-2" 
+                            onclick="deleteStepCompletely(${step.id})">
+                        <i class="bi bi-x-circle"></i> Delete Step
+                    </button>
+                </div>
+            `;
+        } else {
+            cardBody.innerHTML = `
+                <div class="d-flex align-items-center mb-3">
+                    <div class="step-icon me-3" style="
+                        width: 32px;
+                        height: 32px;
+                        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: 0.9rem;
+                    ">
+                        <i class="bi bi-plus-circle"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="card-title mb-1" style="color: var(--text-primary);">
+                            ${step.name}
+                        </h6>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-link-45deg"></i> ${step.download_link || 'No link provided'}
+                    </small>
+                </div>
+                <div class="mt-auto">
+                    <button class="btn btn-sm btn-success" 
+                            onclick="addStepToProfile(${profileId}, ${step.id})">
+                        <i class="bi bi-plus-circle"></i> Add to Profile
+                    </button>
+                </div>
+            `;
+        }
+        
+        card.appendChild(cardBody);
+        col.appendChild(card);
+        return col;
+    }
+    
+    window.toggleEditStep = function(stepId) {
+        const nameInput = document.querySelector(`input[data-step-id="${stepId}"].step-name-input`);
+        const linkInput = document.querySelector(`input[data-step-id="${stepId}"].step-link-input`);
+        const editBtn = document.querySelector(`button[onclick="toggleEditStep(${stepId})"]`);
+        
+        if (nameInput.readOnly) {
+            // Enable editing
+            nameInput.readOnly = false;
+            linkInput.readOnly = false;
+            nameInput.focus();
+            editBtn.innerHTML = '<i class="bi bi-check"></i> Save';
+            editBtn.classList.remove('btn-outline-primary');
+            editBtn.classList.add('btn-success');
+        } else {
+            // Save changes
+            const newName = nameInput.value.trim();
+            const newLink = linkInput.value.trim();
+            const originalName = nameInput.getAttribute('data-original-name');
+            const originalLink = linkInput.getAttribute('data-original-link');
+            
+            if (!newName) {
+                alert('Step name cannot be empty!');
+                return;
+            }
+            
+            if (newName !== originalName || newLink !== originalLink) {
+                // Make API call to update step
+                const updateData = {};
+                if (newName !== originalName) updateData.name = newName;
+                if (newLink !== originalLink) updateData.download_link = newLink;
+                
+                fetch(`/api/steps/${stepId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        nameInput.setAttribute('data-original-name', newName);
+                        linkInput.setAttribute('data-original-link', newLink);
+                        markChanges();
+                        alert('Step updated successfully!');
+                    } else {
+                        alert('Error updating step: ' + data.message);
+                        nameInput.value = originalName;
+                        linkInput.value = originalLink;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating step:', error);
+                    alert('Error updating step. Please try again.');
+                    nameInput.value = originalName;
+                    linkInput.value = originalLink;
+                });
+            }
+            
+            // Disable editing
+            nameInput.readOnly = true;
+            linkInput.readOnly = true;
+            editBtn.innerHTML = '<i class="bi bi-pencil"></i> Edit';
+            editBtn.classList.remove('btn-success');
+            editBtn.classList.add('btn-outline-primary');
+        }
+    };
+
+    window.removeStepFromProfile = function(profileId, stepId) {
+        if (confirm('Are you sure you want to remove this step from the profile?')) {
+            fetch(`/api/profile/${profileId}/steps/${stepId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    markChanges();
+                    fetchProfileDetails();
+                } else {
+                    alert('Error removing step: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error removing step:', error);
+                alert('Error removing step. Please try again.');
+            });
+        }
+    };
+    
+    window.deleteStepCompletely = function(stepId) {
+        if (confirm('Are you sure you want to delete this step completely? This action cannot be undone and will only work if the step is not used by other profiles.')) {
+            fetch(`/api/steps/${stepId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    markChanges();
+                    fetchProfileDetails();
+                    alert('Step deleted successfully!');
+                } else {
+                    alert('Error deleting step: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting step:', error);
+                alert('Error deleting step. Please try again.');
+            });
+        }
+    };
+    
+    window.addStepToProfile = function(profileId, stepId) {
+        fetch(`/api/profile/${profileId}/steps`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ step_id: stepId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                markChanges();
+                fetchProfileDetails();
+            } else {
+                alert('Error adding step: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error adding step:', error);
+            alert('Error adding step. Please try again.');
+        });
+    };
+    
+    // Save button event listener
+    saveButton.addEventListener('click', function() {
+        if (hasChanges) {
+            // In a real implementation, you might want to batch save changes
+            // For now, we'll just clear the changes indicator
+            clearChanges();
+            alert('Changes saved successfully!');
+        }
+    });
+    
+    // Create Step Modal functionality
+    const createStepBtn = document.getElementById('create-step-btn');
+    const createStepModal = new bootstrap.Modal(document.getElementById('createStepModal'));
+    const createStepForm = document.getElementById('createStepForm');
+    const createStepSubmit = document.getElementById('createStepSubmit');
+    const stepNameInput = document.getElementById('stepName');
+    const stepLinkInput = document.getElementById('stepLink');
+    const addToProfileCheckbox = document.getElementById('addToProfile');
+    const stepNameError = document.getElementById('stepNameError');
+    const stepLinkError = document.getElementById('stepLinkError');
+    
+    // Show modal when create button is clicked
+    createStepBtn.addEventListener('click', function() {
+        // Reset form
+        createStepForm.reset();
+        addToProfileCheckbox.checked = true;
+        
+        // Clear validation states
+        stepNameInput.classList.remove('is-invalid');
+        stepLinkInput.classList.remove('is-invalid');
+        stepNameError.textContent = '';
+        stepLinkError.textContent = '';
+        
+        // Show modal
+        createStepModal.show();
+    });
+    
+    // Form validation
+    function validateCreateStepForm() {
+        let isValid = true;
+        
+        // Reset previous validation states
+        stepNameInput.classList.remove('is-invalid');
+        stepLinkInput.classList.remove('is-invalid');
+        stepNameError.textContent = '';
+        stepLinkError.textContent = '';
+        
+        // Validate step name
+        const stepName = stepNameInput.value.trim();
+        if (!stepName) {
+            stepNameInput.classList.add('is-invalid');
+            stepNameError.textContent = 'Step name is required.';
+            isValid = false;
+        } else if (stepName.length < 3) {
+            stepNameInput.classList.add('is-invalid');
+            stepNameError.textContent = 'Step name must be at least 3 characters long.';
+            isValid = false;
+        } else if (stepName.length > 100) {
+            stepNameInput.classList.add('is-invalid');
+            stepNameError.textContent = 'Step name must be less than 100 characters.';
+            isValid = false;
+        }
+        
+        // Validate step link (if provided)
+        const stepLink = stepLinkInput.value.trim();
+        if (stepLink) {
+            try {
+                new URL(stepLink);
+            } catch (e) {
+                stepLinkInput.classList.add('is-invalid');
+                stepLinkError.textContent = 'Please enter a valid URL.';
+                isValid = false;
+            }
+        }
+        
+        return isValid;
+    }
+    
+    // Handle form submission
+    createStepSubmit.addEventListener('click', function() {
+        if (!validateCreateStepForm()) {
+            return;
+        }
+        
+        const stepName = stepNameInput.value.trim();
+        const stepLink = stepLinkInput.value.trim();
+        const shouldAddToProfile = addToProfileCheckbox.checked;
+        
+        // Disable button and show loading state
+        createStepSubmit.disabled = true;
+        createStepSubmit.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating...';
+        
+        // Choose appropriate endpoint based on checkbox
+        const endpoint = shouldAddToProfile ? '/api/steps/create-and-add' : '/api/steps';
+        const requestData = {
+            name: stepName,
+            download_link: stepLink
+        };
+        
+        // Add profile_id if adding to profile
+        if (shouldAddToProfile) {
+            requestData.profile_id = profileId;
+        }
+        
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Close modal
+                createStepModal.hide();
+                
+                // Show success message
+                const message = shouldAddToProfile 
+                    ? `Step "${stepName}" created and added to profile successfully!`
+                    : `Step "${stepName}" created successfully!`;
+                alert(message);
+                
+                // Mark changes and refresh profile details
+                markChanges();
+                fetchProfileDetails();
+            } else {
+                alert('Error creating step: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error creating step:', error);
+            alert('Error creating step. Please try again.');
+        })
+        .finally(() => {
+            // Re-enable button
+            createStepSubmit.disabled = false;
+            createStepSubmit.innerHTML = '<i class="bi bi-check-circle"></i> Create Step';
+        });
+    });
+    
+    // Real-time validation for step name
+    stepNameInput.addEventListener('input', function() {
+        const stepName = this.value.trim();
+        
+        if (stepName) {
+            this.classList.remove('is-invalid');
+            stepNameError.textContent = '';
+        }
+    });
+    
+    // Real-time validation for step link
+    stepLinkInput.addEventListener('input', function() {
+        const stepLink = this.value.trim();
+        
+        if (!stepLink) {
+            // Empty is valid (optional field)
+            this.classList.remove('is-invalid');
+            stepLinkError.textContent = '';
+        } else {
+            try {
+                new URL(stepLink);
+                this.classList.remove('is-invalid');
+                stepLinkError.textContent = '';
+            } catch (e) {
+                this.classList.add('is-invalid');
+                stepLinkError.textContent = 'Please enter a valid URL.';
+            }
+        }
+    });
+    
+    // Handle Enter key in form
+    createStepForm.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            createStepSubmit.click();
+        }
+    });
+
+    // Initialize
+    fetchProfileDetails();
+});
+</script>
+{% endblock %}
