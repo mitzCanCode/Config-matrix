@@ -18,8 +18,14 @@ from config_mtrx_module.technicians import create_technician, verify_user, retri
 from config_mtrx_module.db import  Technicians, get_db_session
 from config_mtrx_module.computers import (
     create_computer, toggle_step, edit_computer_name, edit_computer_deadline,
-    get_computer_progress, assign_technicians_to_computer, assign_profile_to_computer,
-    edit_computer_notes, delete_computer, retrieve_all_computers, computer_info
+    get_computer_progress, get_computer_progress_by_id, assign_technicians_to_computer, assign_profile_to_computer,
+    edit_computer_notes, delete_computer, retrieve_all_computers, computer_info, computer_info_by_id,
+    set_computer_attribute, get_computer_attribute, get_computer_attributes,
+    delete_computer_attribute, set_computer_attributes, toggle_step_by_id, edit_computer_name_by_id,
+    edit_computer_deadline_by_id, edit_computer_notes_by_id, assign_technicians_to_computer_by_id,
+    assign_profile_to_computer_by_id, delete_computer_by_id, set_computer_attribute_by_id,
+    get_computer_attribute_by_id, get_computer_attributes_by_id, delete_computer_attribute_by_id,
+    set_computer_attributes_by_id
 )
 # from config_mtrx_module.db import Session
 from config_mtrx_module.profiles import retrieve_all_profiles, get_profile_steps, create_profile, delete_profile
@@ -178,11 +184,11 @@ def register():
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/api/computer_info/<computer_name>', methods=['GET'])
+@app.route('/api/computer_info/<int:computer_id>', methods=['GET'])
 @login_required
 @handle_api_errors
-def api_computer_info(computer_name) -> Response:
-    computer_data = computer_info(computer_name)
+def api_computer_info_by_id(computer_id) -> Response:
+    computer_data = computer_info_by_id(computer_id)
     if "Error" in computer_data:
         return error_response(computer_data["Error"], computer_data.get("code", 500))
     return json_response(computer_data)
@@ -249,7 +255,7 @@ def add_api_computers():
 def api_profiles() -> Response:
     # Get profiles data directly from database with session management
     try:
-        from config_mtrx_module.db import Profiles, SetupSteps
+        from config_mtrx_module.db import Profiles, SetupSteps, Computers
         
         with get_db_session() as session:
             profiles = session.query(Profiles).all()
@@ -271,12 +277,29 @@ def api_profiles() -> Response:
                         "download_link": step.download_link
                     })
                 
+                # Get computers using this profile
+                computers = session.query(Computers).filter_by(profile_id=profile_id).all()
+                computer_preview = []
+                for computer in computers[:3]:  # Show preview of first 3 computers
+                    computer_preview.append({
+                        "id": computer.id,
+                        "name": computer.name,
+                        "deadline": computer.deadline.isoformat() if computer.deadline else None
+                    })
+                
+                # Get preset attributes count for this profile
+                preset_attributes = profile.preset_attributes
+                attributes_count = len(preset_attributes)
+                
                 profile_list.append({
                     "id": profile_id,
                     "name": profile_name,
                     "description": profile_description,
                     "steps": steps_data,
-                    "step_count": len(steps_data)
+                    "step_count": len(steps_data),
+                    "computer_preview": computer_preview,
+                    "total_computers": len(computers),
+                    "attributes_count": attributes_count
                 })
                 
         return json_response(profile_list)
@@ -362,12 +385,19 @@ def api_get_profile(profile_id: int) -> Response:
                         "download_link": step.download_link or ""
                     })
             
+            # Get preset attributes for this profile
+            preset_attributes = profile.preset_attributes
+            attributes_data = {}
+            for attr in preset_attributes:
+                attributes_data[attr.key] = attr.value
+            
             profile_data = {
                 "id": profile.id,
                 "name": profile.name,
                 "steps": steps_data,
                 "available_steps": available_steps_data,
-                "step_count": len(steps_data)
+                "step_count": len(steps_data),
+                "preset_attributes": attributes_data
             }
             
             return json_response(profile_data)
@@ -585,22 +615,22 @@ def profiles():
 def edit_profile(profile_id):
     return render_template('edit_profile.html', profile_id=profile_id)
 
-@app.route('/setup/<computer_name>')
+@app.route('/setup/<int:computer_id>')
 @login_required
-def setup_computer(computer_name):
-    return render_template('setup.html', computer_name=computer_name)
+def setup_computer_by_id(computer_id):
+    return render_template('setup.html', computer_id=computer_id)
 
-@app.route('/api/computer_setup/<computer_name>', methods=['GET'])
+@app.route('/api/computer_setup/<int:computer_id>', methods=['GET'])
 @login_required
 @handle_api_errors
-def api_computer_setup(computer_name) -> Response: # Get detailed computer setup information including steps
+def api_computer_setup_by_id(computer_id) -> Response: # Get detailed computer setup information including steps
     # Get basic computer info
-    computer_data = computer_info(computer_name)
+    computer_data = computer_info_by_id(computer_id)
     if "Error" in computer_data:
         return error_response(computer_data["Error"], computer_data.get("code", 500))
             
     # Get detailed progress information
-    progress_status, progress_data, progress_code = get_computer_progress(computer_name)
+    progress_status, progress_data, progress_code = get_computer_progress_by_id(computer_id)
     if not progress_status:
         return error_response(progress_data, progress_code)
             
@@ -619,13 +649,13 @@ def api_computer_setup(computer_name) -> Response: # Get detailed computer setup
 @handle_api_errors
 def api_toggle_step() -> Response: # Toggle completion status of a setup step
     data = request.get_json()
-    computer_name = data.get('computer_name')
+    computer_id = data.get('computer_id')
     step_name = data.get('step_name')
     
-    if not all([computer_name, step_name]):
+    if not all([computer_id, step_name]):
         return error_response("Missing required parameters", StatusCodes.bad_request)
     
-    success, message, status_code = toggle_step(computer_name, step_name)
+    success, message, status_code = toggle_step_by_id(computer_id, step_name)
     
     return json_response({
         "success": success,
@@ -638,43 +668,43 @@ def api_toggle_step() -> Response: # Toggle completion status of a setup step
 @handle_api_errors
 def api_edit_computer() -> Response:  # Edit computer details (name, deadline, technician)
     data = request.get_json()
-    current_name = data.get('current_name')
+    computer_id = data.get('computer_id')
     field = data.get('field')  # 'name', 'deadline', or 'technician'
     value = data.get('value')
     
-    if not all([current_name, field, value is not None]):
+    if not all([computer_id, field, value is not None]):
         return error_response("Missing required parameters", 400)
     
     if field == 'name':
-        success, message, status_code = edit_computer_name(current_name, value)
+        success, message, status_code = edit_computer_name_by_id(computer_id, value)
     elif field == 'deadline':
         try:
             # Parse datetime from string
             deadline = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-            success, message, status_code = edit_computer_deadline(current_name, deadline)
+            success, message, status_code = edit_computer_deadline_by_id(computer_id, deadline)
         except ValueError:
             return error_response("Invalid deadline format. Use YYYY-MM-DD HH:MM:SS", 400)
     elif field == 'technician':
         try:
             if value is None or value == '' or value == 'null':
                 # Unassign all technicians
-                success, message, status_code = assign_technicians_to_computer(current_name, [])
+                success, message, status_code = assign_technicians_to_computer_by_id(computer_id, [])
             else:
                 # Expect value to be a list of technician IDs
                 if not isinstance(value, list):
                     return error_response("Technician value must be a list of technician IDs", 400)
                 technician_ids = [int(tid) for tid in value]
-                success, message, status_code = assign_technicians_to_computer(current_name, technician_ids)
+                success, message, status_code = assign_technicians_to_computer_by_id(computer_id, technician_ids)
         except ValueError:
             return error_response("Invalid technician ID(s)", 400)
     elif field == 'profile':
         try:
             profile_id = int(value)
-            success, message, status_code = assign_profile_to_computer(current_name, profile_id)
+            success, message, status_code = assign_profile_to_computer_by_id(computer_id, profile_id)
         except ValueError:
             return error_response("Invalid profile ID", 400)
     elif field == 'notes':
-        success, message, status_code = edit_computer_notes(current_name, value or "")
+        success, message, status_code = edit_computer_notes_by_id(computer_id, value or "")
     else:
         return error_response("Invalid field. Must be 'name', 'deadline', 'technician', 'profile', or 'notes'", 400)
     
@@ -689,12 +719,99 @@ def api_edit_computer() -> Response:  # Edit computer details (name, deadline, t
 @handle_api_errors
 def api_delete_computer() -> Response:
     data = request.get_json()
-    computer_name = data.get('computer_name')
+    computer_id = data.get('computer_id')
     
-    if not computer_name:
-        return error_response("Missing computer name", 400)
+    if not computer_id:
+        return error_response("Missing computer ID", 400)
     
-    success, message, status_code = delete_computer(computer_name)
+    success, message, status_code = delete_computer_by_id(computer_id)
+    
+    return json_response({
+        "success": success,
+        "message": message
+    }, status_code)
+
+@app.route('/api/computer/<int:computer_id>/attributes', methods=['GET'])
+@login_required
+@handle_api_errors
+def api_get_computer_attributes_by_id(computer_id: int) -> Response:
+    """Get all custom attributes for a computer"""
+    success, message, attributes, status_code = get_computer_attributes_by_id(computer_id)
+    
+    if success:
+        return json_response({
+            "success": True,
+            "attributes": attributes or {},
+            "message": message
+        })
+    else:
+        return json_response({
+            "success": False,
+            "message": message
+        }, status_code)
+
+@app.route('/api/computer/<int:computer_id>/attributes/<key>', methods=['GET'])
+@login_required
+@handle_api_errors
+def api_get_computer_attribute_by_id(computer_id: int, key: str) -> Response:
+    """Get a specific custom attribute for a computer"""
+    success, message, value, status_code = get_computer_attribute_by_id(computer_id, key)
+    
+    if success:
+        return json_response({
+            "success": True,
+            "key": key,
+            "value": value,
+            "message": message
+        })
+    else:
+        return json_response({
+            "success": False,
+            "message": message
+        }, status_code)
+
+@app.route('/api/computer/<int:computer_id>/attributes/<key>', methods=['PUT'])
+@csrf.exempt
+@login_required
+@handle_api_errors
+def api_set_computer_attribute_by_id(computer_id: int, key: str) -> Response:
+    """Set a custom attribute for a computer"""
+    data = request.get_json()
+    value = data.get('value', '')
+    
+    success, message, status_code = set_computer_attribute_by_id(computer_id, key, value)
+    
+    return json_response({
+        "success": success,
+        "message": message
+    }, status_code)
+
+@app.route('/api/computer/<int:computer_id>/attributes/<key>', methods=['DELETE'])
+@csrf.exempt
+@login_required
+@handle_api_errors
+def api_delete_computer_attribute_by_id(computer_id: int, key: str) -> Response:
+    """Delete a custom attribute for a computer"""
+    success, message, status_code = delete_computer_attribute_by_id(computer_id, key)
+    
+    return json_response({
+        "success": success,
+        "message": message
+    }, status_code)
+
+@app.route('/api/computer/<int:computer_id>/attributes', methods=['POST'])
+@csrf.exempt
+@login_required
+@handle_api_errors
+def api_set_computer_attributes_by_id(computer_id: int) -> Response:
+    """Set multiple custom attributes for a computer"""
+    data = request.get_json()
+    attributes = data.get('attributes', {})
+    
+    if not isinstance(attributes, dict):
+        return error_response("Attributes must be a dictionary", 400)
+    
+    success, message, status_code = set_computer_attributes_by_id(computer_id, attributes)
     
     return json_response({
         "success": success,
@@ -794,6 +911,103 @@ def api_delete_profile_by_id(profile_id: int) -> Response:
 def api_delete_profile_by_name(profile_name: str) -> Response:
     """Delete a profile by name (REST-style endpoint)"""
     success, message, status_code = delete_profile(profile_name)
+    
+    return json_response({
+        "success": success,
+        "message": message
+    }, status_code)
+
+@app.route('/api/profile/<profile_name>/attributes', methods=['GET'])
+@login_required
+@handle_api_errors
+def api_get_profile_attributes(profile_name: str) -> Response:
+    """Get all preset attributes for a profile"""
+    from config_mtrx_module.profiles import get_profile_attributes
+    
+    success, message, attributes, status_code = get_profile_attributes(profile_name)
+    
+    if success:
+        return json_response({
+            "success": True,
+            "attributes": attributes or {},
+            "message": message
+        })
+    else:
+        return json_response({
+            "success": False,
+            "message": message
+        }, status_code)
+
+@app.route('/api/profile/<profile_name>/attributes/<key>', methods=['GET'])
+@login_required
+@handle_api_errors
+def api_get_profile_attribute(profile_name: str, key: str) -> Response:
+    """Get a specific preset attribute for a profile"""
+    from config_mtrx_module.profiles import get_profile_attribute
+    
+    success, message, value, status_code = get_profile_attribute(profile_name, key)
+    
+    if success:
+        return json_response({
+            "success": True,
+            "key": key,
+            "value": value,
+            "message": message
+        })
+    else:
+        return json_response({
+            "success": False,
+            "message": message
+        }, status_code)
+
+@app.route('/api/profile/<profile_name>/attributes/<key>', methods=['PUT'])
+@csrf.exempt
+@login_required
+@handle_api_errors
+def api_set_profile_attribute(profile_name: str, key: str) -> Response:
+    """Set a preset attribute for a profile"""
+    from config_mtrx_module.profiles import set_profile_attribute
+    
+    data = request.get_json()
+    value = data.get('value', '')
+    
+    success, message, status_code = set_profile_attribute(profile_name, key, value)
+    
+    return json_response({
+        "success": success,
+        "message": message
+    }, status_code)
+
+@app.route('/api/profile/<profile_name>/attributes/<key>', methods=['DELETE'])
+@csrf.exempt
+@login_required
+@handle_api_errors
+def api_delete_profile_attribute(profile_name: str, key: str) -> Response:
+    """Delete a preset attribute for a profile"""
+    from config_mtrx_module.profiles import delete_profile_attribute
+    
+    success, message, status_code = delete_profile_attribute(profile_name, key)
+    
+    return json_response({
+        "success": success,
+        "message": message
+    }, status_code)
+
+@app.route('/api/profile/<profile_name>/attributes', methods=['POST'])
+@csrf.exempt
+@login_required
+@handle_api_errors
+def api_set_profile_attributes(profile_name: str) -> Response:
+    """Set multiple preset attributes for a profile"""
+    from config_mtrx_module.profiles import set_profile_attributes
+    
+    data = request.get_json()
+    attributes = data.get('attributes', {})
+    
+    if not isinstance(attributes, dict):
+        return error_response("Attributes must be a dictionary", 400)
+    
+    success, message, status_code = set_profile_attributes(profile_name, attributes)
     
     return json_response({
         "success": success,

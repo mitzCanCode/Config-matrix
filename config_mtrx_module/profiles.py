@@ -1,5 +1,5 @@
 ### Custom module imports:
-from .db import get_db_session, Profiles, SetupSteps, Computers
+from .db import get_db_session, Profiles, SetupSteps, Computers, ProfileAttributes
 from .utils import StatusCodes
 from .steps import retrieve_all_steps
 
@@ -196,3 +196,164 @@ def add_step_to_profile_by_id(profile_id: int, step_id: int) -> tuple:
     except Exception as e:
         print(e)
         return (False, f"Error adding step to profile", StatusCodes.internal_server_error)
+
+def set_profile_attribute(profile_name: str, key: str, value: str) -> tuple:
+    """Set a preset attribute for a profile"""
+    try:
+        with get_db_session() as session:
+            profile = session.query(Profiles).filter_by(name=profile_name).first()
+            if not profile:
+                return (False, f"Profile '{profile_name}' not found", StatusCodes.not_found)
+            
+            # Check if attribute already exists
+            existing_attr = session.query(ProfileAttributes).filter_by(
+                profile_id=profile.id, key=key
+            ).first()
+            
+            if existing_attr:
+                # Update existing attribute
+                old_value = existing_attr.value
+                existing_attr.value = value
+                return (True, f"Attribute '{key}' updated for profile '{profile_name}' from '{old_value}' to '{value}'", StatusCodes.success)
+            else:
+                # Create new attribute
+                new_attr = ProfileAttributes(
+                    profile_id=profile.id,
+                    key=key,
+                    value=value
+                )
+                session.add(new_attr)
+                return (True, f"Attribute '{key}' set to '{value}' for profile '{profile_name}'", StatusCodes.success)
+    
+    except Exception as e:
+        print(e)
+        return (False, f"Error setting attribute for profile '{profile_name}'", StatusCodes.internal_server_error)
+
+def get_profile_attribute(profile_name: str, key: str) -> tuple:
+    """Get a specific preset attribute for a profile"""
+    try:
+        with get_db_session() as session:
+            profile = session.query(Profiles).filter_by(name=profile_name).first()
+            if not profile:
+                return (False, f"Profile '{profile_name}' not found", None, StatusCodes.not_found)
+            
+            attribute = session.query(ProfileAttributes).filter_by(
+                profile_id=profile.id, key=key
+            ).first()
+            
+            if attribute:
+                return (True, f"Attribute '{key}' found for profile '{profile_name}'", attribute.value, StatusCodes.success)
+            else:
+                return (True, f"Attribute '{key}' not found for profile '{profile_name}'", None, StatusCodes.success)
+    
+    except Exception as e:
+        print(e)
+        return (False, f"Error retrieving attribute for profile '{profile_name}'", None, StatusCodes.internal_server_error)
+
+def get_profile_attributes(profile_name: str) -> tuple:
+    """Get all preset attributes for a profile"""
+    try:
+        with get_db_session() as session:
+            profile = session.query(Profiles).filter_by(name=profile_name).first()
+            if not profile:
+                return (False, f"Profile '{profile_name}' not found", None, StatusCodes.not_found)
+            
+            attributes = {attr.key: attr.value for attr in profile.preset_attributes}
+            return (True, f"Attributes retrieved for profile '{profile_name}'", attributes, StatusCodes.success)
+    
+    except Exception as e:
+        print(e)
+        return (False, f"Error retrieving attributes for profile '{profile_name}'", None, StatusCodes.internal_server_error)
+
+def delete_profile_attribute(profile_name: str, key: str) -> tuple:
+    """Delete a preset attribute for a profile"""
+    try:
+        with get_db_session() as session:
+            profile = session.query(Profiles).filter_by(name=profile_name).first()
+            if not profile:
+                return (False, f"Profile '{profile_name}' not found", StatusCodes.not_found)
+            
+            attribute = session.query(ProfileAttributes).filter_by(
+                profile_id=profile.id, key=key
+            ).first()
+            
+            if attribute:
+                session.delete(attribute)
+                return (True, f"Attribute '{key}' deleted from profile '{profile_name}'", StatusCodes.success)
+            else:
+                return (False, f"Attribute '{key}' not found for profile '{profile_name}'", StatusCodes.not_found)
+    
+    except Exception as e:
+        print(e)
+        return (False, f"Error deleting attribute for profile '{profile_name}'", StatusCodes.internal_server_error)
+
+def set_profile_attributes(profile_name: str, attributes: dict) -> tuple:
+    """Set multiple preset attributes for a profile (replaces all existing attributes)"""
+    try:
+        with get_db_session() as session:
+            profile = session.query(Profiles).filter_by(name=profile_name).first()
+            if not profile:
+                return (False, f"Profile '{profile_name}' not found", StatusCodes.not_found)
+            
+            # Get all existing attributes for this profile
+            existing_attrs = session.query(ProfileAttributes).filter_by(
+                profile_id=profile.id
+            ).all()
+            
+            # Create sets of keys for comparison
+            existing_keys = {attr.key for attr in existing_attrs}
+            new_keys = set(attributes.keys())
+            
+            updated_attrs = []
+            created_attrs = []
+            deleted_attrs = []
+            
+            # Update or create attributes
+            for key, value in attributes.items():
+                existing_attr = session.query(ProfileAttributes).filter_by(
+                    profile_id=profile.id, key=key
+                ).first()
+                
+                if existing_attr:
+                    # Update existing attribute
+                    existing_attr.value = value
+                    updated_attrs.append(key)
+                else:
+                    # Create new attribute
+                    new_attr = ProfileAttributes(
+                        profile_id=profile.id,
+                        key=key,
+                        value=value
+                    )
+                    session.add(new_attr)
+                    created_attrs.append(key)
+            
+            # Delete attributes that are no longer present
+            keys_to_delete = existing_keys - new_keys
+            for key in keys_to_delete:
+                attr_to_delete = session.query(ProfileAttributes).filter_by(
+                    profile_id=profile.id, key=key
+                ).first()
+                if attr_to_delete:
+                    session.delete(attr_to_delete)
+                    deleted_attrs.append(key)
+            
+            # Build message
+            message_parts = []
+            if created_attrs:
+                message_parts.append(f"Created attributes: {', '.join(created_attrs)}")
+            if updated_attrs:
+                message_parts.append(f"Updated attributes: {', '.join(updated_attrs)}")
+            if deleted_attrs:
+                message_parts.append(f"Deleted attributes: {', '.join(deleted_attrs)}")
+            
+            if message_parts:
+                message = f"Attributes set for profile '{profile_name}'. " + "; ".join(message_parts)
+            else:
+                message = f"No changes made to attributes for profile '{profile_name}'"
+            
+            return (True, message, StatusCodes.success)
+    
+    except Exception as e:
+        print(e)
+        return (False, f"Error setting attributes for profile '{profile_name}'", StatusCodes.internal_server_error)

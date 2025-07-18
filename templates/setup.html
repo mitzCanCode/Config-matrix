@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Setup - {{ computer_name }} - Config Matrix{% endblock %}
+{% block title %}Setup - Config Matrix{% endblock %}
 
 {% block content %}
 
@@ -36,7 +36,7 @@
                 <!-- Header with back button -->
                 <div class="d-flex align-items-center justify-content-between mb-4">
                     <div class="d-flex align-items-center">
-                        <a href="/computers" class="btn btn-outline-secondary me-3">
+                        <a href="/computers" class="btn btn-outline-primary me-3">
                             <i class="bi bi-arrow-left"></i> Back to Computers
                         </a>
                     </div>
@@ -44,7 +44,7 @@
                 </div>
                 <div class="d-flex align-items-center justify-content-between mb-4">
                     <div class="d-flex align-items-center">
-                        <h1 class="mb-0"><span id="computer-name-title">{{ computer_name }}</span></h1>
+                        <h1 class="mb-0"><span id="computer-name-title">Loading...</span></h1>
                     </div>
                     <button class="btn btn-outline-danger" onclick="showDeleteConfirmation()">
                         <i class="bi bi-trash"></i> Delete Computer
@@ -192,6 +192,56 @@
                                         </div>
                                     </div>
                                     
+                                    <!-- Custom Attributes Section -->
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <strong>Custom Attributes:</strong>
+                                            <div class="d-flex gap-1">
+                                                <button id="attributes-edit-btn" class="btn btn-sm btn-outline-secondary" onclick="editAllAttributes()" style="
+                                                    border-color: var(--accent-purple);
+                                                    color: var(--accent-purple);
+                                                    transition: all 0.3s ease;
+                                                " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';"
+                                                >
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button id="attributes-save-btn" class="btn btn-sm btn-success" onclick="saveAllAttributes()" style="display: none;">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button id="attributes-cancel-btn" class="btn btn-sm btn-secondary" onclick="cancelAllAttributes()" style="display: none;">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div id="attributes-container">
+                                            <div class="list-group list-group-flush" id="attributes-list">
+                                                <!-- Attributes will be populated here -->
+                                            </div>
+                                            <div id="attributes-placeholder" class="text-muted text-center py-3" style="font-style: italic; display: none;">No custom attributes set</div>
+                                            <div id="add-attribute-form" class="list-group-item" style="display: none;">
+                                                <div class="row g-2 align-items-center">
+                                                    <div class="col-md-4">
+                                                        <input type="text" id="new-attribute-key" class="form-control form-control-sm" placeholder="Key" maxlength="50">
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <input type="text" id="new-attribute-value" class="form-control form-control-sm" placeholder="Value" maxlength="255">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-content-center mt-2">
+                                                <button id="add-attribute-btn" class="btn btn-sm btn-outline-secondary" onclick="addNewAttribute()" style="
+                                                    border-color: var(--accent-purple);
+                                                    color: var(--accent-purple);
+                                                    transition: all 0.3s ease;
+                                                    display: none;
+                                                " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';"
+                                                >
+                                                    <i class="bi bi-plus-circle me-1"></i>Add Attribute
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Notes Section -->
                                     <div class="mb-3">
                                         <strong>Notes:</strong>
@@ -310,7 +360,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const computerName = "{{ computer_name }}";
+    const computerId = {{ computer_id }};
     const loadingSpinner = document.getElementById('loading-spinner');
     const errorContainer = document.getElementById('error-container');
     const errorMessage = document.getElementById('error-message');
@@ -410,8 +460,8 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                computer_name: computerName,
+body: JSON.stringify({
+                computer_id: computerId,
                 step_name: stepName
             })
         })
@@ -434,33 +484,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create step element
     function createStepElement(step, isCompleted) {
         const stepDiv = document.createElement('div');
-        stepDiv.className = 'list-group-item d-flex justify-content-between align-items-center rounded mb-3 shadow-sm';
         
-        // Apply theme styling - different colors for completed vs remaining steps
-        if (isCompleted) {
-            stepDiv.style.cssText = `
-                background: #07513995;
-                border: 1px solid #28a745;
-                transition: all 0.3s ease;
-            `;
-        } else {
-            stepDiv.style.cssText = `
-                background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-                border: 1px solid var(--border-color);
-                transition: all 0.3s ease;
-            `;
-        }
-        
-        // Add hover effects
-        stepDiv.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px)';
-            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-        });
-        
-        stepDiv.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-        });
+        // Use standard Bootstrap list group styling
+        stepDiv.className = 'list-group-item list-group-item-light d-flex justify-content-between align-items-center';
         
         const buttonClass = isCompleted ? 'btn-outline-danger' : 'btn-outline-success';
         const buttonText = isCompleted ? 'Mark Incomplete' : 'Mark Complete';
@@ -551,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorContainer.style.display = 'none';
         setupContent.style.display = 'none';
         
-        fetch(`/api/computer_setup/${encodeURIComponent(computerName)}`)
+fetch(`/api/computer_setup/${encodeURIComponent(computerId)}`)
             .then(response => response.json())
             .then(data => {
                 if (data.Error) {
@@ -566,11 +592,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     technician_id: data.technician ? data.technician.id : null,
                     technician_ids: data.technicians ? data.technicians.map(t => t.id) : [],
                     profile_id: data.profile ? data.profile.id : null,
-                    notes: data.notes || ''
+                    notes: data.notes || '',
+                    attributes: data.attributes || {}
                 };
                 
                 // Populate computer info
                 document.getElementById('computer-name').textContent = data.name;
+                
+                // Update page title and header
+                document.title = `Setup - ${data.name} - Config Matrix`;
+                document.getElementById('computer-name-title').textContent = data.name;
                 
                 // Handle technician display (multiple technicians)
                 const technicianElement = document.getElementById('computer-technician');
@@ -634,6 +665,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     remainingContainer.innerHTML = '<div class="text-success text-center p-4 rounded" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">All steps completed! 🎉</div>';
                 }
+                
+                // Update attributes display
+                updateAttributesDisplay(data.attributes || {});
                 
                 // Show content
                 loadingSpinner.style.display = 'none';
@@ -997,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Save field edit via API
     function saveFieldEdit(field, value) {
         const requestData = {
-            current_name: originalValues.name,
+            computer_id: computerId,
             field: field,
             value: value
         };
@@ -1020,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     showToast('Computer name changed successfully. Redirecting...', 'success');
                     // Redirect to the new computer's setup page
                     setTimeout(() => {
-                        window.location.href = `/setup/${encodeURIComponent(value)}`;
+                        window.location.href = `/setup/${computerId}`;
                     }, 1500);
                 } else {
                     // Reload the setup data
@@ -1072,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show delete confirmation modal
     function showDeleteConfirmation() {
         // Set the computer name in the modal
-        document.getElementById('deleteComputerName').textContent = originalValues.name || computerName;
+        document.getElementById('deleteComputerName').textContent = originalValues.name || 'Unknown';
         
         // Show the modal
         const modal = new bootstrap.Modal(document.getElementById('deleteComputerModal'));
@@ -1082,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Delete computer function
     function deleteComputer() {
         const requestData = {
-            computer_name: originalValues.name || computerName
+            computer_id: computerId
         };
         
         console.log('Deleting computer:', requestData);
@@ -1121,6 +1155,646 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.hide();
     });
     
+    // ===== ATTRIBUTES CRUD FUNCTIONS =====
+    
+    // Create attribute element
+    function createAttributeElement(key, value) {
+        const attrDiv = document.createElement('div');
+        attrDiv.className = 'list-group-item attribute-item';
+        attrDiv.dataset.key = key;
+        
+        attrDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="flex-grow-1">
+                    <span class="attribute-display">
+                        <strong>${key}:</strong> ${value}
+                    </span>
+                    <div class="attribute-edit-form" style="display: none;">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm attribute-key-input" value="${key}" maxlength="50">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm attribute-value-input" value="${value}" maxlength="255">
+                            </div>
+                            <div class="col-md-2 d-flex justify-content-center">
+                                <button class="btn btn-sm btn-outline-danger attribute-delete-btn" onclick="deleteAttribute('${key}')" style="display: none;">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return attrDiv;
+    }
+    
+    // Update attributes display
+    function updateAttributesDisplay(attributes) {
+        const attributesList = document.getElementById('attributes-list');
+        const attributesPlaceholder = document.getElementById('attributes-placeholder');
+        
+        attributesList.innerHTML = '';
+        
+        if (attributes && Object.keys(attributes).length > 0) {
+            Object.entries(attributes).forEach(([key, value]) => {
+                attributesList.appendChild(createAttributeElement(key, value));
+            });
+            attributesPlaceholder.style.display = 'none';
+        } else {
+            attributesPlaceholder.style.display = 'block';
+        }
+    }
+    
+    // Show add new attribute form
+    function addNewAttribute() {
+        const addForm = document.getElementById('add-attribute-form');
+        const addBtn = document.getElementById('add-attribute-btn');
+        
+        addForm.style.display = 'block';
+        addBtn.style.display = 'none';
+        
+        // Clear and focus on key input
+        document.getElementById('new-attribute-key').value = '';
+        document.getElementById('new-attribute-value').value = '';
+        document.getElementById('new-attribute-key').focus();
+        
+        // Setup auto-save event listeners
+        setupAutoSaveListeners();
+    }
+    
+    // Setup auto-save event listeners for add attribute form
+    function setupAutoSaveListeners() {
+        const keyInput = document.getElementById('new-attribute-key');
+        const valueInput = document.getElementById('new-attribute-value');
+        
+        // Remove existing event listeners to avoid duplicates
+        const newKeyInput = keyInput.cloneNode(true);
+        const newValueInput = valueInput.cloneNode(true);
+        keyInput.parentNode.replaceChild(newKeyInput, keyInput);
+        valueInput.parentNode.replaceChild(newValueInput, valueInput);
+        
+        // Add event listeners for blur and Enter key
+        function handleAutoSave() {
+            const key = newKeyInput.value.trim();
+            const value = newValueInput.value.trim();
+            
+            if (key && value) {
+                saveNewAttribute();
+            } else if (!key && !value) {
+                // Both empty, cancel the form
+                cancelNewAttribute();
+            }
+        }
+        
+        // Add blur event listeners
+        newKeyInput.addEventListener('blur', handleAutoSave);
+        newValueInput.addEventListener('blur', handleAutoSave);
+        
+        // Add Enter key event listeners
+        function handleEnterKey(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleAutoSave();
+            }
+        }
+        
+        newKeyInput.addEventListener('keydown', handleEnterKey);
+        newValueInput.addEventListener('keydown', handleEnterKey);
+    }
+    
+    // Save new attribute
+    function saveNewAttribute() {
+        const keyInput = document.getElementById('new-attribute-key');
+        const valueInput = document.getElementById('new-attribute-value');
+        
+        const key = keyInput.value.trim();
+        const value = valueInput.value.trim();
+        
+        if (!key) {
+            showToast('Key cannot be empty', 'error');
+            keyInput.focus();
+            return;
+        }
+        
+        if (!value) {
+            showToast('Value cannot be empty', 'error');
+            valueInput.focus();
+            return;
+        }
+        
+        // Check if key already exists
+        if (originalValues.attributes.hasOwnProperty(key)) {
+            showToast('Attribute with this key already exists', 'error');
+            keyInput.focus();
+            return;
+        }
+        
+        // Call API to save attribute
+        fetch(`/api/computer/${computerId}/attributes/${encodeURIComponent(key)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ value: value })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+// Update local attributes
+                originalValues.attributes[key] = value;
+                
+                // Check if we're in edit mode before updating display
+                const editBtn = document.getElementById('attributes-edit-btn');
+                const isInEditMode = editBtn.style.display === 'none';
+                
+                updateAttributesDisplay(originalValues.attributes);
+                
+                // If we were in edit mode, restore the edit state
+                if (isInEditMode) {
+                    // Re-enter edit mode for all attributes
+                    const saveBtn = document.getElementById('attributes-save-btn');
+                    const cancelBtn = document.getElementById('attributes-cancel-btn');
+                    const addBtn = document.getElementById('add-attribute-btn');
+                    
+                    // Show/hide buttons
+                    editBtn.style.display = 'none';
+                    saveBtn.style.display = 'inline-block';
+                    cancelBtn.style.display = 'inline-block';
+                    addBtn.style.display = 'block';
+                    
+                    // Show all attribute edit forms and delete buttons
+                    const attributeItems = document.querySelectorAll('.attribute-item');
+                    attributeItems.forEach(item => {
+                        const display = item.querySelector('.attribute-display');
+                        const editForm = item.querySelector('.attribute-edit-form');
+                        const deleteBtn = item.querySelector('.attribute-delete-btn');
+                        
+                        display.style.display = 'none';
+                        editForm.style.display = 'block';
+                        deleteBtn.style.display = 'inline-block';
+                    });
+                }
+                
+                if (isInEditMode) {
+                    // In edit mode, just clear the form and keep it visible
+                    document.getElementById('new-attribute-key').value = '';
+                    document.getElementById('new-attribute-value').value = '';
+                    document.getElementById('new-attribute-key').focus();
+                    // Re-setup auto-save listeners for the cleared form
+                    setupAutoSaveListeners();
+                } else {
+                    // Not in edit mode, cancel completely
+                    cancelNewAttribute();
+                }
+            } else {
+                showToast('Error: ' + (data.message || 'Failed to save attribute'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error: Failed to save attribute', 'error');
+        });
+    }
+    
+    // Cancel new attribute
+    function cancelNewAttribute() {
+        const addForm = document.getElementById('add-attribute-form');
+        const addBtn = document.getElementById('add-attribute-btn');
+        const editBtn = document.getElementById('attributes-edit-btn');
+        const saveBtn = document.getElementById('attributes-save-btn');
+        const cancelBtn = document.getElementById('attributes-cancel-btn');
+        
+        addForm.style.display = 'none';
+        
+        // Check if we're in edit mode
+        const isInEditMode = editBtn.style.display === 'none';
+        
+        if (isInEditMode) {
+            // In edit mode, keep add button visible
+            addBtn.style.display = 'block';
+        } else {
+            // Not in edit mode, hide add button
+            addBtn.style.display = 'none';
+        }
+        
+        // Clear inputs
+        document.getElementById('new-attribute-key').value = '';
+        document.getElementById('new-attribute-value').value = '';
+    }
+    
+    // Edit existing attribute
+    function editAttribute(key) {
+        const attrDiv = document.querySelector(`[data-key="${key}"]`);
+        if (!attrDiv) return;
+        
+        const displaySpan = attrDiv.querySelector('.attribute-display');
+        const editForm = attrDiv.querySelector('.attribute-edit-form');
+        const editBtn = attrDiv.querySelector('.attribute-edit-btn');
+        const saveBtn = attrDiv.querySelector('.attribute-save-btn');
+        const cancelBtn = attrDiv.querySelector('.attribute-cancel-btn');
+        
+        // Show edit form, hide display
+        displaySpan.style.display = 'none';
+        editForm.style.display = 'block';
+        
+        // Show/hide buttons
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'inline-block';
+        
+        // Focus on key input
+        const keyInput = attrDiv.querySelector('.attribute-key-input');
+        keyInput.focus();
+        keyInput.select();
+    }
+    
+    // Save edited attribute
+    function saveAttribute(originalKey) {
+        const attrDiv = document.querySelector(`[data-key="${originalKey}"]`);
+        if (!attrDiv) return;
+        
+        const keyInput = attrDiv.querySelector('.attribute-key-input');
+        const valueInput = attrDiv.querySelector('.attribute-value-input');
+        
+        const newKey = keyInput.value.trim();
+        const newValue = valueInput.value.trim();
+        
+        if (!newKey) {
+            showToast('Key cannot be empty', 'error');
+            keyInput.focus();
+            return;
+        }
+        
+        if (!newValue) {
+            showToast('Value cannot be empty', 'error');
+            valueInput.focus();
+            return;
+        }
+        
+        // Check if key changed and new key already exists
+        if (newKey !== originalKey && originalValues.attributes.hasOwnProperty(newKey)) {
+            showToast('Attribute with this key already exists', 'error');
+            keyInput.focus();
+            return;
+        }
+        
+        // If key changed, we need to delete the old one and create a new one
+        if (newKey !== originalKey) {
+            // Delete old attribute first
+            fetch(`/api/computer/${computerId}/attributes/${encodeURIComponent(originalKey)}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Now create the new attribute
+                    return fetch(`/api/computer/${computerId}/attributes/${encodeURIComponent(newKey)}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ value: newValue })
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to delete old attribute');
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Attribute updated successfully', 'success');
+                    // Update local attributes
+                    delete originalValues.attributes[originalKey];
+                    originalValues.attributes[newKey] = newValue;
+                    updateAttributesDisplay(originalValues.attributes);
+                } else {
+                    showToast('Error: ' + (data.message || 'Failed to save new attribute'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error: Failed to update attribute', 'error');
+            });
+        } else {
+            // Just update the value
+            fetch(`/api/computer/${computerId}/attributes/${encodeURIComponent(originalKey)}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ value: newValue })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Update local attributes
+                    originalValues.attributes[originalKey] = newValue;
+                    updateAttributesDisplay(originalValues.attributes);
+                } else {
+                    showToast('Error: ' + (data.message || 'Failed to save attribute'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error: Failed to save attribute', 'error');
+            });
+        }
+    }
+    
+    // Cancel edit attribute
+    function cancelEditAttribute(key) {
+        const attrDiv = document.querySelector(`[data-key="${key}"]`);
+        if (!attrDiv) return;
+        
+        const displaySpan = attrDiv.querySelector('.attribute-display');
+        const editForm = attrDiv.querySelector('.attribute-edit-form');
+        const editBtn = attrDiv.querySelector('.attribute-edit-btn');
+        const saveBtn = attrDiv.querySelector('.attribute-save-btn');
+        const cancelBtn = attrDiv.querySelector('.attribute-cancel-btn');
+        const keyInput = attrDiv.querySelector('.attribute-key-input');
+        const valueInput = attrDiv.querySelector('.attribute-value-input');
+        
+        // Reset input values
+        keyInput.value = key;
+        valueInput.value = originalValues.attributes[key] || '';
+        
+        // Show display, hide edit form
+        displaySpan.style.display = 'block';
+        editForm.style.display = 'none';
+        
+        // Show/hide buttons
+        editBtn.style.display = 'inline-block';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+    }
+    
+    // Delete attribute
+    function deleteAttribute(key) {
+        if (!confirm(`Are you sure you want to delete the attribute "${key}"?`)) {
+            return;
+        }
+        
+        fetch(`/api/computer/${computerId}/attributes/${encodeURIComponent(key)}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                // Update local attributes
+                delete originalValues.attributes[key];
+                
+                // Check if we're in edit mode before updating display
+                const editBtn = document.getElementById('attributes-edit-btn');
+                const isInEditMode = editBtn.style.display === 'none';
+                
+                updateAttributesDisplay(originalValues.attributes);
+                
+                // If we were in edit mode, restore the edit state
+                if (isInEditMode) {
+                    // Re-enter edit mode for all attributes
+                    const saveBtn = document.getElementById('attributes-save-btn');
+                    const cancelBtn = document.getElementById('attributes-cancel-btn');
+                    const addBtn = document.getElementById('add-attribute-btn');
+                    
+                    // Show/hide buttons
+                    editBtn.style.display = 'none';
+                    saveBtn.style.display = 'inline-block';
+                    cancelBtn.style.display = 'inline-block';
+                    addBtn.style.display = 'block';
+                    
+                    // Show all attribute edit forms and delete buttons
+                    const attributeItems = document.querySelectorAll('.attribute-item');
+                    attributeItems.forEach(item => {
+                        const display = item.querySelector('.attribute-display');
+                        const editForm = item.querySelector('.attribute-edit-form');
+                        const deleteBtn = item.querySelector('.attribute-delete-btn');
+                        
+                        display.style.display = 'none';
+                        editForm.style.display = 'block';
+                        deleteBtn.style.display = 'inline-block';
+                    });
+                }
+            } else {
+                showToast('Error: ' + (data.message || 'Failed to delete attribute'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error: Failed to delete attribute', 'error');
+        });
+    }
+    
+    // ===== SINGLE EDIT MODE FUNCTIONS =====
+    
+    // Edit all attributes at once
+    function editAllAttributes() {
+        const editBtn = document.getElementById('attributes-edit-btn');
+        const saveBtn = document.getElementById('attributes-save-btn');
+        const cancelBtn = document.getElementById('attributes-cancel-btn');
+        const addBtn = document.getElementById('add-attribute-btn');
+        
+        // Show/hide buttons
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'inline-block';
+        addBtn.style.display = 'block';
+        
+        // Show all attribute edit forms and delete buttons
+        const attributeItems = document.querySelectorAll('.attribute-item');
+        attributeItems.forEach(item => {
+            const display = item.querySelector('.attribute-display');
+            const editForm = item.querySelector('.attribute-edit-form');
+            const deleteBtn = item.querySelector('.attribute-delete-btn');
+            
+            display.style.display = 'none';
+            editForm.style.display = 'block';
+            deleteBtn.style.display = 'inline-block';
+        });
+    }
+    
+    // Save all attributes
+    function saveAllAttributes() {
+        const attributeItems = document.querySelectorAll('.attribute-item');
+        const changedAttributes = [];
+        const errors = [];
+        
+        // Collect all changes
+        attributeItems.forEach(item => {
+            const originalKey = item.dataset.key;
+            const keyInput = item.querySelector('.attribute-key-input');
+            const valueInput = item.querySelector('.attribute-value-input');
+            
+            const newKey = keyInput.value.trim();
+            const newValue = valueInput.value.trim();
+            
+            if (!newKey) {
+                errors.push(`Key cannot be empty for attribute "${originalKey}"`);
+                return;
+            }
+            
+            if (!newValue) {
+                errors.push(`Value cannot be empty for attribute "${originalKey}"`);
+                return;
+            }
+            
+            // Check if there are changes
+            if (newKey !== originalKey || newValue !== originalValues.attributes[originalKey]) {
+                changedAttributes.push({
+                    originalKey: originalKey,
+                    newKey: newKey,
+                    newValue: newValue
+                });
+            }
+        });
+        
+        // Check for duplicate keys
+        const newKeys = [];
+        attributeItems.forEach(item => {
+            const keyInput = item.querySelector('.attribute-key-input');
+            const newKey = keyInput.value.trim();
+            if (newKeys.includes(newKey)) {
+                errors.push(`Duplicate key: "${newKey}"`);
+            } else {
+                newKeys.push(newKey);
+            }
+        });
+        
+        if (errors.length > 0) {
+            showToast('Errors: ' + errors.join(', '), 'error');
+            return;
+        }
+        
+        if (changedAttributes.length === 0) {
+            // No changes, just cancel
+            cancelAllAttributes();
+            return;
+        }
+        
+        // Process changes sequentially
+        let processed = 0;
+        const totalChanges = changedAttributes.length;
+        
+        function processNextChange() {
+            if (processed >= totalChanges) {
+                // All changes processed, refresh display
+                loadSetupData();
+                return;
+            }
+            
+            const change = changedAttributes[processed];
+            processed++;
+            
+            if (change.originalKey !== change.newKey) {
+                // Key changed, delete old and create new
+                fetch(`/api/computer/${computerId}/attributes/${encodeURIComponent(change.originalKey)}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        return fetch(`/api/computer/${computerId}/attributes/${encodeURIComponent(change.newKey)}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ value: change.newValue })
+                        });
+                    } else {
+                        throw new Error(data.message || 'Failed to delete old attribute');
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update local attributes
+                        delete originalValues.attributes[change.originalKey];
+                        originalValues.attributes[change.newKey] = change.newValue;
+                        processNextChange();
+                    } else {
+                        showToast('Error: ' + (data.message || 'Failed to save new attribute'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error: Failed to update attribute', 'error');
+                });
+            } else {
+                // Just update the value
+                fetch(`/api/computer/${computerId}/attributes/${encodeURIComponent(change.originalKey)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ value: change.newValue })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update local attributes
+                        originalValues.attributes[change.originalKey] = change.newValue;
+                        processNextChange();
+                    } else {
+                        showToast('Error: ' + (data.message || 'Failed to save attribute'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error: Failed to save attribute', 'error');
+                });
+            }
+        }
+        
+        // Start processing changes
+        processNextChange();
+    }
+    
+    // Cancel all attributes editing
+    function cancelAllAttributes() {
+        const editBtn = document.getElementById('attributes-edit-btn');
+        const saveBtn = document.getElementById('attributes-save-btn');
+        const cancelBtn = document.getElementById('attributes-cancel-btn');
+        const addBtn = document.getElementById('add-attribute-btn');
+        
+        // Show/hide buttons
+        editBtn.style.display = 'inline-block';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        addBtn.style.display = 'none';
+        
+        // Hide all attribute edit forms and delete buttons
+        const attributeItems = document.querySelectorAll('.attribute-item');
+        attributeItems.forEach(item => {
+            const originalKey = item.dataset.key;
+            const display = item.querySelector('.attribute-display');
+            const editForm = item.querySelector('.attribute-edit-form');
+            const deleteBtn = item.querySelector('.attribute-delete-btn');
+            const keyInput = item.querySelector('.attribute-key-input');
+            const valueInput = item.querySelector('.attribute-value-input');
+            
+            // Reset input values
+            keyInput.value = originalKey;
+            valueInput.value = originalValues.attributes[originalKey] || '';
+            
+            // Show display, hide edit form
+            display.style.display = 'block';
+            editForm.style.display = 'none';
+            deleteBtn.style.display = 'none';
+        });
+        
+        // Cancel any pending new attribute
+        cancelNewAttribute();
+    }
+    
+    // ===== END SINGLE EDIT MODE FUNCTIONS =====
+    
+    // ===== END ATTRIBUTES CRUD FUNCTIONS =====
+    
     // Make functions available globally
     window.toggleStep = toggleStep;
     window.editField = editField;
@@ -1129,10 +1803,19 @@ document.addEventListener('DOMContentLoaded', function() {
     window.cancelField = cancelField;
     window.resetAllButtonStates = resetAllButtonStates;
     window.showDeleteConfirmation = showDeleteConfirmation;
+    window.addNewAttribute = addNewAttribute;
+    window.saveNewAttribute = saveNewAttribute;
+    window.cancelNewAttribute = cancelNewAttribute;
+    window.editAttribute = editAttribute;
+    window.saveAttribute = saveAttribute;
+    window.cancelEditAttribute = cancelEditAttribute;
+    window.deleteAttribute = deleteAttribute;
+    window.editAllAttributes = editAllAttributes;
+    window.saveAllAttributes = saveAllAttributes;
+    window.cancelAllAttributes = cancelAllAttributes;
     
     // Load initial data
     Promise.all([loadTechnicians(), loadProfiles(), loadSetupData()]);
 });
 </script>
-
 {% endblock %}

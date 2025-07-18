@@ -15,6 +15,12 @@
     --accent-green: #91ffab;
     --border-color: #464469;
     --shadow-color: rgba(0, 0, 0, 0.3);
+    --transition-base: all 0.3s ease;
+    --transition-fast: all 0.2s ease;
+    --border-radius: 0.375rem;
+    --box-shadow-base: 0 4px 12px var(--shadow-color);
+    --box-shadow-hover: 0 8px 25px var(--shadow-color);
+    --gradient-purple-cyan: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%);
 }
 
 /* Base styles */
@@ -151,20 +157,22 @@ html, body {
 
 /* Card styling */
 .card {
-    background-color: var(--bg-secondary) !important;
-    border: 1px solid var(--border-color) !important;
-    color: var(--text-primary) !important;
-    box-shadow: 0 4px 12px var(--shadow-color) !important;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    box-shadow: var(--box-shadow-base);
+    border-radius: var(--border-radius);
+    transition: var(--transition-base);
 }
 
 .card-header {
-    background-color: var(--bg-tertiary) !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    color: var(--text-primary) !important;
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
 }
 
 .card-body {
-    color: var(--text-primary) !important;
+    color: var(--text-primary);
 }
 
 /* Search Icon Styling */
@@ -177,22 +185,26 @@ html, body {
     color: var(--accent-cyan);
 }
 
-/* Form styling */
+/* Form styling - Base form controls */
 .form-control {
-    background-color: var(--bg-tertiary) !important;
-    border: 1px solid var(--border-color) !important;
-    color: var(--text-primary) !important;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: var(--border-radius);
+    padding: 0.75rem;
+    transition: var(--transition-base);
 }
 
 .form-control:focus {
-    background-color: var(--bg-tertiary) !important;
-    border-color: var(--accent-purple) !important;
-    box-shadow: 0 0 0 0.2rem rgba(144, 108, 255, 0.25) !important;
-    color: var(--text-primary) !important;
+    background-color: var(--bg-tertiary);
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 0.2rem rgba(144, 108, 255, 0.25);
+    color: var(--text-primary);
+    outline: none;
 }
 
 .form-control::placeholder {
-    color: var(--text-muted) !important;
+    color: var(--text-muted);
 }
 
 /* Select dropdown styling */
@@ -1087,7 +1099,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .card-body.d-flex.flex-column {
-    min-height: 300px;
+    min-height: auto;
 }
 
 /* Animation for progress bar when it loads */
@@ -1234,7 +1246,7 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: none !important;
 }
 
-/* Simple modal styling - centered window */
+/* Modal styling - consistent centering for all modals */
 .modal {
     display: none;
     position: fixed;
@@ -1245,6 +1257,10 @@ h1, h2, h3, h4, h5, h6 {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
+    /* Always use flex for centering */
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
 }
 
 /* Prevent background scrolling when modal is open */
@@ -1254,15 +1270,31 @@ body.modal-open {
 
 .modal.show {
     display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
+/* Modal dialog - flexible sizing with consistent centering */
 .modal-dialog {
     position: relative;
-    width: 90%;
+    width: 100%;
     max-width: 500px;
-    margin: 20px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+}
+
+/* Modal dialog size variants */
+.modal-dialog.modal-sm {
+    max-width: 300px;
+}
+
+.modal-dialog.modal-lg {
+    max-width: 800px;
+}
+
+.modal-dialog.modal-xl {
+    max-width: 1140px;
 }
 
 .modal-content {
@@ -1303,5 +1335,294 @@ body.modal-open {
     .modal-footer {
         padding: 1rem;
     }
+}
+
+/* Custom btn-outline-primary styling with purple accent */
+.btn-outline-primary {
+    border-color: var(--accent-purple) !important;
+    color: var(--accent-purple) !important;
+    background-color: transparent !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--accent-purple) !important;
+    border-color: var(--accent-purple) !important;
+    color: white !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(144, 108, 255, 0.3) !important;
+}
+
+.btn-outline-primary:focus {
+    background-color: var(--accent-purple) !important;
+    border-color: var(--accent-purple) !important;
+    color: white !important;
+    box-shadow: 0 0 0 0.2rem rgba(144, 108, 255, 0.25) !important;
+}
+
+.btn-outline-primary:active,
+.btn-outline-primary.active {
+    background-color: var(--accent-purple) !important;
+    border-color: var(--accent-purple) !important;
+    color: white !important;
+    box-shadow: 0 0 0 0.2rem rgba(144, 108, 255, 0.25) !important;
+}
+
+.btn-outline-primary:disabled,
+.btn-outline-primary.disabled {
+    color: var(--text-muted) !important;
+    background-color: transparent !important;
+    border-color: var(--border-color) !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* ==========================================
+   LOGIN/REGISTER FORM STYLING
+   ========================================== */
+
+/* Input group base styling */
+.input-group {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.input-group .form-control {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Password field styling */
+.input-group .form-control#password {
+    border-right: none !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.input-group .form-control#password:focus {
+    border-color: var(--accent-purple) !important;
+    border-right: none !important;
+    border-top-left-radius: 0.375rem !important;
+    border-bottom-left-radius: 0.375rem !important;
+    box-shadow: none !important;
+}
+
+/* Eye toggle button styling */
+.input-group .btn-outline-primary#togglePassword {
+    border-left: none !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-muted) !important;
+    background-color: var(--bg-tertiary) !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    transition: all 0.3s ease !important;
+}
+
+.input-group .btn-outline-primary#togglePassword:hover {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.input-group .btn-outline-primary#togglePassword:focus,
+.input-group .btn-outline-primary#togglePassword:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: var(--border-color) !important;
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-muted) !important;
+    transform: none !important;
+}
+
+/* Unified focus state for entire password input group */
+.input-group:focus-within {
+    box-shadow: 0 0 0 0.2rem rgba(144, 108, 255, 0.25) !important;
+    border-radius: 0.375rem !important;
+}
+
+/* Override individual form-control focus when inside input-group */
+.input-group .form-control:focus {
+    box-shadow: none !important;
+}
+
+/* Password field focused - eye button styling */
+.input-group .form-control#password:focus + .btn-outline-primary#togglePassword {
+    border-color: var(--accent-purple) !important;
+    color: var(--accent-purple) !important;
+    background-color: var(--bg-tertiary) !important;
+    border-top-right-radius: 0.375rem !important;
+    border-bottom-right-radius: 0.375rem !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.input-group .form-control#password:focus + .btn-outline-primary#togglePassword:hover {
+    background-color: var(--accent-purple) !important;
+    color: white !important;
+    border-color: var(--accent-purple) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.input-group .form-control#password:focus + .btn-outline-primary#togglePassword:focus,
+.input-group .form-control#password:focus + .btn-outline-primary#togglePassword:active {
+    border-color: var(--accent-purple) !important;
+    color: var(--accent-purple) !important;
+    background-color: var(--bg-tertiary) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+
+
+
+/* custom.css: Additional custom styling */
+
+/* List group styling - Override Bootstrap defaults */
+.list-group {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--box-shadow-base) !important;
+    overflow: hidden !important;
+}
+
+.list-group-item {
+    padding: 15px 20px !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    background-color: var(--bg-secondary) !important;
+    transition: all 0.3s ease !important;
+}
+
+.list-group-item:hover {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.list-group-item.active {
+    background-color: var(--accent-purple) !important;
+    border-color: var(--accent-purple) !important;
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+.list-group-item.active:hover {
+    background-color: #7c5aff !important;
+    border-color: #7c5aff !important;
+    color: white !important;
+}
+
+.list-group-item:first-child {
+    border-top-left-radius: var(--border-radius) !important;
+    border-top-right-radius: var(--border-radius) !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+.list-group-item:last-child {
+    border-bottom: 1px solid var(--border-color) !important;
+    border-bottom-left-radius: var(--border-radius) !important;
+    border-bottom-right-radius: var(--border-radius) !important;
+}
+
+/* Bootstrap list group flush variant */
+.list-group-flush .list-group-item {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-radius: 0 !important;
+}
+
+.list-group-flush .list-group-item:hover {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+.list-group-flush .list-group-item.active {
+    background-color: var(--accent-purple) !important;
+    color: white !important;
+}
+
+/* List group with links */
+a.list-group-item,
+button.list-group-item {
+    color: var(--text-primary) !important;
+    text-decoration: none !important;
+}
+
+a.list-group-item:hover,
+button.list-group-item:hover {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    text-decoration: none !important;
+}
+
+a.list-group-item.active,
+button.list-group-item.active {
+    background-color: var(--accent-purple) !important;
+    border-color: var(--accent-purple) !important;
+    color: white !important;
+    z-index: 2 !important;
+}
+
+/* List group contextual classes */
+.list-group-item-primary {
+    background-color: rgba(144, 108, 255, 0.1) !important;
+    border-color: var(--accent-purple) !important;
+    color: var(--accent-purple) !important;
+}
+
+.list-group-item-secondary {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+.list-group-item-success {
+    background-color: rgba(145, 255, 171, 0.1) !important;
+    border-color: var(--accent-green) !important;
+    color: var(--accent-green) !important;
+}
+
+.list-group-item-danger {
+    background-color: rgba(255, 128, 128, 0.1) !important;
+    border-color: var(--accent-pink) !important;
+    color: var(--accent-pink) !important;
+}
+
+.list-group-item-warning {
+    background-color: rgba(255, 204, 102, 0.1) !important;
+    border-color: #ffcc66 !important;
+    color: #ffcc66 !important;
+}
+
+.list-group-item-info {
+    background-color: rgba(99, 242, 241, 0.1) !important;
+    border-color: var(--accent-cyan) !important;
+    color: var(--accent-cyan) !important;
+}
+
+.list-group-item-light {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.list-group-item-dark {
+    background-color: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
 }
 

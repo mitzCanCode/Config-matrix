@@ -1,0 +1,52 @@
+======================================================================
+ 
+Το όνομά του/της είναι: Xxxxxxx Xxxxxxx
+Mε λατινικούς χαρακτήρες είναι: Xxxxxxx Xxxxxxx
+ 
+Εσωτερικό τηλέφωνο XXX και απευθείας νούμερο το XXXXXXXXXXX
+ 
+To mail είναι xxxx@xxxxx.xx
+Temporary password: xxxxxx
+ 
+Profile User:
+User name: xxxxxxx
+Temporary password: Temp2025@@
+ 
+TeamViewer User -----> xxxx@xxxxx.xx
+TeamViewer Password  ----->
+ 
+Service Desk Asset ----> 
+Service Desk User -----> xxxx@xxxxx.xx
+Kaspersky User -----> xxxx@xxxxx.xx    
+ 
+Install End Point Central ---->
+ 
+Adjust Power options ------> 
+Enable System Restore -----> 
+Hostname: xxxxxxx   ------> 
+Users: USER - RTM  - ITDept ---->
+MRB Choices --------->
+BitLocker   --------->
+SoftOne    ---------->
+Bico       ---------->
+TeamViewer setup ---->
+Kaspersky    ------->
+Slack  ---------->
+VLC  ------------>
+Google Chrome --->
+Acrobat Reader -->
+7-zip  ---------->
+Office  --------->
+ShareFile  ------>
+Viber   --------->
+WhatsApp  ------->
+Printer  -------->
+ 
+Speecy   -------->
+Apografi    ----->
+ 
+ITDept Password ---->
+ 
+Uninstall End Point Central ---->
+ 
+======================================================================

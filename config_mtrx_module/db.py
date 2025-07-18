@@ -50,6 +50,26 @@ class Technicians(Base):
     # Keep the old one-to-many relationship for backward compatibility (deprecated)
     computers = relationship("Computers", back_populates="technician")
 
+class ComputerAttributes(Base):
+    __tablename__ = 'computer_attributes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    computer_id = Column(Integer, ForeignKey('computers.id'), nullable=False)
+    key = Column(String, nullable=False)
+    value = Column(String, nullable=True)
+    
+    computer = relationship("Computers", back_populates="attributes")
+
+class ProfileAttributes(Base):
+    __tablename__ = 'profile_attributes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    profile_id = Column(Integer, ForeignKey('profiles.id'), nullable=False)
+    key = Column(String, nullable=False)
+    value = Column(String, nullable=True)
+    
+    profile = relationship("Profiles", back_populates="preset_attributes")
+
 class Computers(Base):
     __tablename__ = 'computers'
 
@@ -73,6 +93,11 @@ class Computers(Base):
     setup_steps = relationship(
         "SetupSteps", secondary=computer_step_association, back_populates="completed_by"
     )
+    
+    # One-to-many relationship with custom attributes
+    attributes = relationship(
+        "ComputerAttributes", back_populates="computer", cascade="all, delete-orphan"
+    )
 
 class Profiles(Base):
     __tablename__ = 'profiles'
@@ -84,6 +109,11 @@ class Profiles(Base):
         "SetupSteps", secondary=profile_step_association, back_populates="profiles"
     )
     computers = relationship("Computers", back_populates="profile")
+    
+    # One-to-many relationship with preset attributes
+    preset_attributes = relationship(
+        "ProfileAttributes", back_populates="profile", cascade="all, delete-orphan"
+    )
 
 class SetupSteps(Base):
     __tablename__ = 'setup_steps'

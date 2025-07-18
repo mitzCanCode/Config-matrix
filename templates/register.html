@@ -27,7 +27,7 @@
                     {{ form.password.label(class="form-label") }}
                     <div class="input-group">
                         {{ form.password(class="form-control", id="password") }}
-                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                        <button class="btn btn-outline-primary" type="button" id="togglePassword">
                             <i class="bi bi-eye" id="toggleIcon"></i>
                         </button>
                     </div>
@@ -44,7 +44,7 @@
                 </div>
                 
                 <div class="d-grid gap-2">
-                    {{ form.submit(class="btn btn-success") }}
+                    {{ form.submit(class="btn btn-primary") }}
                 </div>
             </form>
             
@@ -55,18 +55,5 @@
     </div>
 </div>
 
-<script>
-document.getElementById('togglePassword').addEventListener('click', function() {
-    const passwordField = document.getElementById('password');
-    const toggleIcon = document.getElementById('toggleIcon');
-    
-    if (passwordField.type === 'password') {
-        passwordField.type = 'text';
-        toggleIcon.className = 'bi bi-eye-slash';
-    } else {
-        passwordField.type = 'password';
-        toggleIcon.className = 'bi bi-eye';
-    }
-});
-</script>
+<script src="/static/js/password-toggle.js"></script>
 {% endblock %}
