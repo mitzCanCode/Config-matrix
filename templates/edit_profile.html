@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalLink = linkInput.getAttribute('data-original-link');
             
             if (!newName) {
-                alert('Step name cannot be empty!');
+                showToast('Step name cannot be empty!', 'error');
                 return;
             }
             
@@ -451,16 +451,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         nameInput.setAttribute('data-original-name', newName);
                         linkInput.setAttribute('data-original-link', newLink);
                         markChanges();
-                        alert('Step updated successfully!');
+                        showToast('Step updated successfully!', 'success');
                     } else {
-                        alert('Error updating step: ' + data.message);
+                        showToast('Error updating step: ' + data.message, 'error');
                         nameInput.value = originalName;
                         linkInput.value = originalLink;
                     }
                 })
                 .catch(error => {
                     console.error('Error updating step:', error);
-                    alert('Error updating step. Please try again.');
+                    showToast('Error updating step. Please try again.', 'error');
                     nameInput.value = originalName;
                     linkInput.value = originalLink;
                 });
@@ -489,12 +489,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     markChanges();
                     fetchProfileDetails();
                 } else {
-                    alert('Error removing step: ' + data.message);
+                    showToast('Error removing step: ' + data.message, 'error');
                 }
             })
             .catch(error => {
                 console.error('Error removing step:', error);
-                alert('Error removing step. Please try again.');
+                showToast('Error removing step. Please try again.', 'error');
             });
         }
     };
@@ -512,14 +512,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     markChanges();
                     fetchProfileDetails();
-                    alert('Step deleted successfully!');
+                    showToast('Step deleted successfully!', 'success');
                 } else {
-                    alert('Error deleting step: ' + data.message);
+                    showToast('Error deleting step: ' + data.message, 'error');
                 }
             })
             .catch(error => {
                 console.error('Error deleting step:', error);
-                alert('Error deleting step. Please try again.');
+                showToast('Error deleting step. Please try again.', 'error');
             });
         }
     };
@@ -538,12 +538,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 markChanges();
                 fetchProfileDetails();
             } else {
-                alert('Error adding step: ' + data.message);
+                showToast('Error adding step: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error adding step:', error);
-            alert('Error adding step. Please try again.');
+            showToast('Error adding step. Please try again.', 'error');
         });
     };
     
@@ -578,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // In a real implementation, you might want to batch save changes
             // For now, we'll just clear the changes indicator
             clearChanges();
-            alert('Changes saved successfully!');
+            showToast('Changes saved successfully!', 'success');
         }
     });
     
@@ -693,18 +693,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const message = shouldAddToProfile 
                     ? `Step "${stepName}" created and added to profile successfully!`
                     : `Step "${stepName}" created successfully!`;
-                alert(message);
+                showToast(message, 'success');
                 
                 // Mark changes and refresh profile details
                 markChanges();
                 fetchProfileDetails();
             } else {
-                alert('Error creating step: ' + data.message);
+                showToast('Error creating step: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error creating step:', error);
-            alert('Error creating step. Please try again.');
+            showToast('Error creating step. Please try again.', 'error');
         })
         .finally(() => {
             // Re-enable button
@@ -991,45 +991,11 @@ window.cancelAllAttributes = function() {
     updateAttributesDisplay(originalValues.attributes);
 };
     
-    function showToast(message, type = 'success') {
-        // Create toast container if it doesn't exist
-        let toastContainer = document.querySelector('.toast-container');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.className = 'position-fixed top-0 end-0 p-3 toast-container';
-            toastContainer.style.zIndex = '9999';
-            toastContainer.style.pointerEvents = 'none';
-            document.body.appendChild(toastContainer);
-        }
-        
-        // Create toast element
-        const toastId = 'toast-' + Date.now();
-        const alertClass = type === 'error' ? 'danger' : 'success';
-        const toast = document.createElement('div');
-        toast.id = toastId;
-        toast.className = `alert alert-${alertClass} alert-dismissible fade show`;
-        toast.setAttribute('role', 'alert');
-        toast.style.pointerEvents = 'auto';
-        toast.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        // Add toast to container
-        toastContainer.appendChild(toast);
-        
-        // Auto-remove after 10 seconds
-        setTimeout(() => {
-            if (document.getElementById(toastId)) {
-                toast.classList.remove('show');
-                setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
-                }, 150);
-            }
-        }, 10000);
-    }
+    // Use global showToast function from main.js
+    const showToast = window.showToast || function(message, type = 'success') {
+        console.warn('Global showToast function not found, falling back to alert');
+        alert(message);
+    };
     
     
     // Add missing functions for attribute management

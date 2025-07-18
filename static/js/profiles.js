@@ -64,14 +64,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                     <div class="d-flex flex-column gap-2">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editProfile(${profile.id})">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="editProfile(${profile.id})" style="
+                            border-color: var(--accent-purple);
+                            color: var(--accent-purple);
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.backgroundColor='var(--accent-purple)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-purple)';">
                             <i class="bi bi-pencil"></i> Edit
                         </button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteProfile(${profile.id}, '${profile.name}')" style="
-                            border-color: var(--accent-pink);
-                            color: var(--accent-pink);
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.backgroundColor='var(--accent-pink)'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent-pink)';">
+                        <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteProfile(${profile.id}, '${profile.name}')">
                             <i class="bi bi-trash"></i> Delete
                         </button>
                     </div>
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const profileName = prompt('Enter profile name:');
 
         if (!profileName) {
-            alert('Profile name is required!');
+            showToast('Profile name is required!', 'error');
             return;
         }
 
@@ -162,15 +162,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Profile created successfully!');
+                showToast('Profile created successfully!', 'success');
                 loadProfiles();
             } else {
-                alert('Error creating profile: ' + data.message);
+                showToast('Error creating profile: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An unexpected error occurred while creating the profile.');
+            showToast('An unexpected error occurred while creating the profile.', 'error');
         });
     }
     
@@ -302,17 +302,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 modal.hide();
                 
                 // Show success message
-                alert('Profile and associated computers deleted successfully!');
+                showToast('Profile and associated computers deleted successfully!', 'success');
                 
                 // Reload profiles
                 loadProfiles();
             } else {
-                alert('Error deleting profile: ' + (data.message || 'Unknown error'));
+                showToast('Error deleting profile: ' + (data.message || 'Unknown error'), 'error');
             }
         })
         .catch(error => {
             console.error('Error deleting profile:', error);
-            alert('Error deleting profile. Please try again.');
+            showToast('Error deleting profile. Please try again.', 'error');
         })
         .finally(() => {
             // Reset button state

@@ -9,46 +9,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentFilterId = 0; // Track current filter operation to avoid race conditions
     let selectedFilterTechnicianIds = []; // Store selected technician IDs for filtering
     
-    // Toast notification function
-    function showToast(message, type = 'success') {
-        // Create toast container if it doesn't exist
-        let toastContainer = document.querySelector('.toast-container');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.className = 'position-fixed top-0 end-0 p-3 toast-container';
-            toastContainer.style.zIndex = '9999';
-            toastContainer.style.pointerEvents = 'none';
-            document.body.appendChild(toastContainer);
-        }
-        
-        // Create toast element
-        const toastId = 'toast-' + Date.now();
-        const alertClass = type === 'error' ? 'danger' : 'success';
-        const toast = document.createElement('div');
-        toast.id = toastId;
-        toast.className = `alert alert-${alertClass} alert-dismissible fade show`;
-        toast.setAttribute('role', 'alert');
-        toast.style.pointerEvents = 'auto';
-        toast.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        // Add toast to container
-        toastContainer.appendChild(toast);
-        
-        // Auto-remove after 10 seconds
-        setTimeout(() => {
-            if (document.getElementById(toastId)) {
-                toast.classList.remove('show');
-                setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
-                }, 150);
-            }
-        }, 10000);
-    }
+    // Use global showToast function (defined in main.js)
+    // If global function is not available, use a fallback
+    const showToast = window.showToast || function(message, type = 'success') {
+        console.warn('Global showToast function not found, falling back to alert');
+        alert(message);
+    };
 
     function loadComputers() {
         if (isLoading) {

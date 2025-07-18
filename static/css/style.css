@@ -21,6 +21,20 @@
     --box-shadow-base: 0 4px 12px var(--shadow-color);
     --box-shadow-hover: 0 8px 25px var(--shadow-color);
     --gradient-purple-cyan: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%);
+    
+    /* Toast notification colors (RGB values for rgba usage) */
+    --toast-bg-success: 25, 135, 84;
+    --toast-bg-danger: 220, 53, 69;
+    --toast-bg-warning: 255, 193, 7;
+    --toast-bg-info: 13, 202, 240;
+    --toast-border-success: 25, 135, 84;
+    --toast-border-danger: 220, 53, 69;
+    --toast-border-warning: 255, 193, 7;
+    --toast-border-info: 13, 202, 240;
+    --toast-progress-success: 25, 135, 84;
+    --toast-progress-danger: 220, 53, 69;
+    --toast-progress-warning: 255, 193, 7;
+    --toast-progress-info: 13, 202, 240;
 }
 
 /* Base styles */
